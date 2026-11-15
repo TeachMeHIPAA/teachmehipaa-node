@@ -17,8 +17,6 @@ import {
   type FakeTransport,
 } from "./support/fake-transport.js";
 import {
-  APP_ID,
-  APP_SECRET,
   CLIENT_ID,
   CLIENT_SECRET,
   INTROSPECTION_ROUTE,
@@ -26,10 +24,7 @@ import {
   LEARNER_ROUTE,
   ORG_ID,
   ORG,
-  REFRESH_TOKEN_1,
-  REFRESH_TOKEN_2,
   TOKEN_ROUTE,
-  grantTokenReply,
   introspectionReply,
   learnerBody,
   learnerReply,
@@ -77,16 +72,6 @@ const moduleSource = ({ code }: Sample): string => {
 
 /** Stand-ins for the caller's own storage that samples name in prose. */
 const PLACEHOLDERS = `declare global {
-  /** The admin's session during Partner consent. */
-  const sessions: {
-    save(values: { state: string; codeVerifier: string }): Promise<void>;
-    load(): Promise<{ state: string; codeVerifier: string }>;
-  };
-  /** A Refresh token per connected Organization. */
-  const grants: {
-    load(orgId: string): Promise<string>;
-    save(orgId: string, refreshToken: string): Promise<void>;
-  };
   /** The Event log position a tail resumes from. */
   const cursors: {
     load(): Promise<string | undefined>;
@@ -195,8 +180,6 @@ beforeEach(() => {
   });
   vi.stubEnv("TMH_CLIENT_ID", CLIENT_ID);
   vi.stubEnv("TMH_CLIENT_SECRET", CLIENT_SECRET);
-  vi.stubEnv("TMH_APP_ID", APP_ID);
-  vi.stubEnv("TMH_APP_SECRET", APP_SECRET);
   vi.stubEnv("TMH_WEBHOOK_SECRET", WEBHOOK_SECRET);
 });
 
@@ -214,7 +197,6 @@ afterAll(() => {
 const TYPE_CHECKED_ONLY: Readonly<Record<string, string>> = {
   files: "reads and writes files on disk",
   "webhook-express": "starts an Express server",
-  "partner-consent": "spans a browser redirect between its two halves",
 };
 
 const page = (items: readonly unknown[], nextCursor: string | null = null) => ({
@@ -504,57 +486,6 @@ describe("README samples, run against a fake transport", () => {
         },
       ],
     ]);
-  });
-
-  runs("partner-grant", async () => {
-    const saved: string[] = [];
-    vi.stubGlobal("grants", {
-      load: () => Promise.resolve(REFRESH_TOKEN_1),
-      save: (_orgId: string, refreshToken: string) => {
-        saved.push(refreshToken);
-        return Promise.resolve();
-      },
-    });
-    const fake = createFakeTransport()
-      .script(
-        TOKEN_ROUTE,
-        grantTokenReply("access-token-grant", REFRESH_TOKEN_2),
-      )
-      .script(`GET ${ORG}/learners`, page([learnerBody]));
-
-    await runSample("partner-grant", fake);
-
-    const [exchange] = fake.requestsTo(TOKEN_ROUTE);
-    expect(new URLSearchParams(textBody(exchange)).get("refresh_token")).toBe(
-      REFRESH_TOKEN_1,
-    );
-    expect(saved).toEqual([REFRESH_TOKEN_2]);
-    expect(
-      fake.requestsTo(`GET ${ORG}/learners`)[0]?.headers.authorization,
-    ).toBe("Bearer access-token-grant");
-    expect(logged).toEqual([[1]]);
-  });
-
-  runs("partner-organizations", async () => {
-    const partnerId = "ptn_01JD8E2C3D4E5F6G7H8J9K0M1N";
-    const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, tokenReply("access-token-partner"))
-      .script(
-        `GET /v1/partners/${partnerId}/organizations`,
-        page([
-          {
-            orgId: "org_clinic",
-            name: "Clinic",
-            createdAt: "2026-11-01T09:00:00.000Z",
-            grantActive: true,
-          },
-        ]),
-      );
-
-    await runSample("partner-organizations", fake);
-
-    expect(logged).toEqual([["org_clinic", true]]);
-    expect(fake.requestsTo(INTROSPECTION_ROUTE)).toEqual([]);
   });
 
   runs("events-tail", async () => {

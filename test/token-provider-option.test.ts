@@ -5,12 +5,8 @@ import TeachMeHipaa, {
 } from "../src/index.js";
 import { createFakeTransport } from "./support/fake-transport.js";
 import {
-  APP_BASIC_AUTHORIZATION,
-  APP_ID,
-  APP_SECRET,
   CLIENT_ID,
   CLIENT_SECRET,
-  INTROSPECTION_ROUTE,
   LEARNER_ID,
   LEARNER_ROUTE,
   ORG_ID,
@@ -87,48 +83,5 @@ describe("The tokenProvider option", () => {
           },
         } as never),
     ).toThrow(TypeError);
-  });
-});
-
-describe("Partner-level tokens", () => {
-  it("lets a Partner app's client credentials call partners.* without an Organization lookup", async () => {
-    const partnerId = "ptn_01JD82ZX4C5V6B7N8M9Q0W1E2R";
-    const route = `GET /v1/partners/${partnerId}`;
-    const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, {
-        json: {
-          access_token: "access-token-partner",
-          token_type: "Bearer",
-          expires_in: 900,
-          scope: "partner:orgs:read partner:orgs:write",
-        },
-      })
-      .script(route, {
-        json: {
-          partnerId,
-          name: "Reseller Co",
-          appId: APP_ID,
-          status: "active",
-          maxChildOrgs: 50,
-          childOrgCount: 3,
-          createdAt: "2026-11-01T09:00:00.000Z",
-        },
-      });
-    const client = new TeachMeHipaa({
-      clientId: APP_ID,
-      clientSecret: APP_SECRET,
-      transport: fake.transport,
-    });
-
-    const partner = await client.partners.retrieve(partnerId);
-
-    expect(partner.partnerId).toBe(partnerId);
-    expect(fake.requestsTo(INTROSPECTION_ROUTE)).toHaveLength(0);
-    expect(fake.requestsTo(TOKEN_ROUTE)[0]?.headers.authorization).toBe(
-      APP_BASIC_AUTHORIZATION,
-    );
-    expect(fake.requestsTo(route)[0]?.headers.authorization).toBe(
-      "Bearer access-token-partner",
-    );
   });
 });

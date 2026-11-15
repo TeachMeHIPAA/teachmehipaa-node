@@ -1,6 +1,6 @@
 import { systemClock, type Clock } from "./clock.js";
 import { withRequestLogging, type Logger } from "./logging.js";
-import type { TokenEndpoint, TokenProvider } from "./token-provider.js";
+import type { TokenProvider } from "./token-provider.js";
 import { fetchTransport, type Transport } from "./transport.js";
 import { optionsValidator } from "./usage.js";
 import { buildUserAgent, type AppInfo } from "./user-agent.js";
@@ -50,14 +50,11 @@ interface SharedClientOptions {
   readonly clock?: Clock;
 }
 
-/** Authenticate with an API client's, or a Partner's, own credentials. */
+/** Authenticate with an API client's own credentials. */
 export interface ClientCredentialsOptions extends SharedClientOptions {
-  /**
-   * Your API client's id (`cli_…`), or your Partner app's id (`app_…`) for
-   * a Partner-level token that calls `partners.*`.
-   */
+  /** Your API client's id (`cli_…`). */
   readonly clientId: string;
-  /** Your API client's secret (`tmh_cs_…`) or Partner app's (`tmh_as_…`). */
+  /** Your API client's secret (`tmh_cs_…`). */
   readonly clientSecret: string;
   /**
    * The Scopes to request, such as `learners:write`. Defaults to every Scope
@@ -67,11 +64,11 @@ export interface ClientCredentialsOptions extends SharedClientOptions {
   readonly tokenProvider?: never;
 }
 
-/** Authenticate with Access tokens from somewhere else, such as a Grant. */
+/** Authenticate with Access tokens you obtained elsewhere. */
 export interface TokenProviderOptions extends SharedClientOptions {
   /**
-   * Supplies every Access token, e.g. `partnerGrantTokenProvider(...)` or
-   * `staticTokenProvider(...)`. Give this or `clientId` and `clientSecret`.
+   * Supplies every Access token, e.g. `staticTokenProvider(...)`. Give this
+   * or `clientId` and `clientSecret`.
    */
   readonly tokenProvider: TokenProvider;
   readonly clientId?: never;
@@ -299,49 +296,6 @@ const resolveAuth = (options: ClientOptions): ResolvedAuth => {
   };
 };
 
-// A Grant's Refresh token works only in its own Environment, and a provider
-// that refreshed against another one would hand the client tokens its API
-// refuses.
-const requireSameBaseUrl = (auth: ResolvedAuth, baseUrl: string): void => {
-  const providerBaseUrl =
-    auth.kind === "tokenProvider" ? auth.tokenProvider.baseUrl : undefined;
-  if (typeof providerBaseUrl !== "string") {
-    return;
-  }
-  const normalized = trimTrailingSlashes(providerBaseUrl);
-  if (normalized !== baseUrl) {
-    throw invalid(
-      `tokenProvider gets Access tokens from ${normalized}, but the client calls ${baseUrl}; give both the same environment and baseUrl`,
-    );
-  }
-};
-
-/** Settings for calling the token endpoint without a client. */
-export type TokenEndpointOptions = Pick<
-  SharedClientOptions,
-  | "environment"
-  | "baseUrl"
-  | "timeout"
-  | "appInfo"
-  | "fetch"
-  | "transport"
-  | "clock"
->;
-
-export const resolveTokenEndpoint = (
-  options: TokenEndpointOptions,
-): TokenEndpoint & { readonly baseUrl: string } => {
-  const baseUrl = resolveBaseUrl(options.environment, options.baseUrl);
-  return Object.freeze({
-    baseUrl,
-    tokenUrl: `${baseUrl}/auth/token`,
-    userAgent: buildUserAgent(resolveAppInfo(options.appInfo)),
-    transport: resolveTransport(options.fetch, options.transport),
-    timeout: resolveTimeout(options.timeout),
-    clock: options.clock ?? systemClock,
-  });
-};
-
 /** Validates options once and copies them, so later edits have no effect. */
 export const resolveConfig = (options: ClientOptions): ResolvedConfig => {
   const unknown = Object.keys(options).filter((key) => !KNOWN_OPTIONS.has(key));
@@ -352,11 +306,9 @@ export const resolveConfig = (options: ClientOptions): ResolvedConfig => {
   const transport = resolveTransport(options.fetch, options.transport);
   const logger = resolveLogger(options.logger);
   const auth = resolveAuth(options);
-  const baseUrl = resolveBaseUrl(options.environment, options.baseUrl);
-  requireSameBaseUrl(auth, baseUrl);
   return Object.freeze({
     auth,
-    baseUrl,
+    baseUrl: resolveBaseUrl(options.environment, options.baseUrl),
     organizationId: optionalNonEmptyString(
       options.organizationId,
       "organizationId",

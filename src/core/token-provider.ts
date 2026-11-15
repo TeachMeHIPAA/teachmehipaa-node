@@ -11,7 +11,7 @@ import { usageError } from "./usage.js";
 
 /**
  * Supplies the Access token for each request. Client credentials is the
- * default adapter; partner Grants and static tokens plug in here too.
+ * default adapter; static tokens plug in here too.
  */
 export interface TokenProvider {
   /** Rejects with the mint's error, which the caller's call then raises. */
@@ -22,11 +22,6 @@ export interface TokenProvider {
    * that was already replaced is left alone, so concurrent 401s mint once.
    */
   invalidate(accessToken: string): void;
-  /**
-   * The base URL this provider gets Access tokens from, when it has one. The
-   * client refuses a provider whose base URL differs from its own.
-   */
-  readonly baseUrl?: string;
 }
 
 /** Where and how the client talks to the OAuth token endpoint. */
@@ -38,13 +33,13 @@ export interface TokenEndpoint {
   readonly clock: Clock;
 }
 
-export interface TokenResponse {
+interface TokenResponse {
   readonly access_token: string;
   readonly expires_in: number;
   readonly [field: string]: unknown;
 }
 
-export interface TokenExchange {
+interface TokenExchange {
   readonly token: TokenResponse;
   /** When the request left, so expiry can't stretch past the real lifetime. */
   readonly requestedAt: number;
@@ -62,12 +57,10 @@ const isNetworkOrServerFailure = (error: TeachMeHipaaError): boolean =>
   error.status === null || error.status >= 500;
 
 /**
- * POSTs one grant to the token endpoint. `maxRetries` must be 0 for
- * `refresh_token` and `authorization_code` grants: replaying a consumed code
- * or Refresh token revokes the whole Grant (ADR-0004). Only
- * `client_credentials`, which mints a fresh token each time, may retry.
+ * POSTs one `client_credentials` grant to the token endpoint. It mints a
+ * fresh token each time, so a failed exchange is safe to retry.
  */
-export const exchangeAtTokenEndpoint = (
+const exchangeAtTokenEndpoint = (
   endpoint: TokenEndpoint,
   form: URLSearchParams,
   authorization: string,
@@ -120,7 +113,7 @@ export interface ClientCredentialsSettings extends TokenEndpoint {
 }
 
 /** An Access token and when it stops working, in clock milliseconds. */
-export interface CachedToken {
+interface CachedToken {
   readonly accessToken: string;
   readonly expiresAt: number;
 }
@@ -128,10 +121,10 @@ export interface CachedToken {
 const REMINT_MARGIN_MS = 60_000;
 
 /**
- * The caching every minting provider shares: re-mint 60 s before expiry,
- * one mint in flight at a time, and forget a token the API rejected.
+ * The Access-token cache: re-mint 60 s before expiry, one mint in flight at
+ * a time, and forget a token the API rejected.
  */
-export const cachingTokenProvider = (
+const cachingTokenProvider = (
   mint: () => Promise<CachedToken>,
   clock: Clock,
 ): TokenProvider => {
@@ -162,10 +155,7 @@ export const cachingTokenProvider = (
 };
 
 // RFC 6749 §2.3.1: Basic credentials are form-encoded before base64.
-export const basicAuthorization = (
-  clientId: string,
-  clientSecret: string,
-): string =>
+const basicAuthorization = (clientId: string, clientSecret: string): string =>
   `Basic ${btoa(`${encodeURIComponent(clientId)}:${encodeURIComponent(clientSecret)}`)}`;
 
 export const clientCredentialsTokenProvider = (

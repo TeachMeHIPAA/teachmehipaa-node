@@ -23,7 +23,6 @@ ETags, Operations and webhook verification, so your code only calls methods.
 - [Operations](#operations)
 - [Uploads and downloads](#uploads-and-downloads)
 - [Webhooks](#webhooks)
-- [Partner apps](#partner-apps)
 - [Tailing the Event log](#tailing-the-event-log)
 - [Configuration](#configuration)
 - [Logging](#logging)
@@ -101,8 +100,7 @@ console.log(compliance.lastResponse.requestId);
 ```
 
 A client's configuration is fixed when you create it. To act for another
-Organization, create another client. Partner-level calls (`partners.*`) are
-not Organization-scoped and take the `partnerId` as their first argument.
+Organization, create another client.
 
 ## Public lookups without credentials
 
@@ -225,12 +223,12 @@ The client retries network errors, 409 `conflict`, 429 and 5xx up to
 `maxRetries` times (2 by default), backing off from 0.5 s up to 5 s with jitter
 and honoring `Retry-After` up to 60 s. It only retries calls that are safe to
 replay: reads, writes that carry an `Idempotency-Key`, and the few writes that
-are idempotent by nature, such as `seatOrders.quote`. PATCH and DELETE are
-never retried.
+are idempotent by nature, such as `learners.createLaunchLink`. PATCH and
+DELETE are never retried.
 
 Every create and custom method gets a generated UUID `Idempotency-Key`, reused
-by each of its retries, so a retry never enrolls a Learner twice or charges
-twice. Pass your own to make a call safe to repeat across processes:
+by each of its retries, so a retry never enrolls a Learner twice. Pass your own
+to make a call safe to repeat across processes:
 
 ```ts sample=request-options
 const enrollment = await client.enrollments.create(
@@ -458,117 +456,6 @@ const event = await webhooks.constructEvent(
 console.log(event);
 ```
 
-## Partner apps
-
-A Partner app acts for many Organizations, each connected through a Grant that
-an admin approves on the TeachMeHIPAA consent screen. `TeachMeHipaa.oauth`
-builds the consent URL with a PKCE challenge and exchanges the returned code.
-Keep the `state` and `codeVerifier` in the admin's session between the two
-steps. The `sessions` and `grants` objects below stand in for your own
-storage.
-
-```ts sample=partner-consent
-import TeachMeHipaa from "teachmehipaa";
-
-const { codeVerifier, codeChallenge } =
-  await TeachMeHipaa.oauth.createPkcePair();
-const state = TeachMeHipaa.oauth.createState();
-await sessions.save({ state, codeVerifier });
-
-const consentUrl = TeachMeHipaa.oauth.authorizeUrl({
-  clientId: process.env.TMH_APP_ID!,
-  redirectUri: "https://partner.example.com/tmh/callback",
-  scopes: ["learners:read", "learners:write"],
-  state,
-  codeChallenge,
-});
-console.log(`Redirect the admin to ${consentUrl}`);
-
-// Later, on the redirect to https://partner.example.com/tmh/callback:
-const callback = new URL(
-  "https://partner.example.com/tmh/callback?code=…&state=…",
-);
-const saved = await sessions.load();
-if (callback.searchParams.get("state") !== saved.state) {
-  throw new Error("state mismatch: possible CSRF");
-}
-const grant = await TeachMeHipaa.oauth.exchangeCode({
-  clientId: process.env.TMH_APP_ID!,
-  clientSecret: process.env.TMH_APP_SECRET!,
-  code: callback.searchParams.get("code")!,
-  redirectUri: "https://partner.example.com/tmh/callback",
-  codeVerifier: saved.codeVerifier,
-});
-await grants.save("org_acme", grant.refreshToken);
-```
-
-Then create a client per connected Organization with
-`partnerGrantTokenProvider`. Every token exchange rotates the Grant's Refresh
-token, and the provider saves each new one to your `tokenStore` before it uses
-the Access token that came with it.
-
-```ts sample=partner-grant
-import TeachMeHipaa, {
-  partnerGrantTokenProvider,
-  type TokenStore,
-} from "teachmehipaa";
-
-const tokenStore: TokenStore = {
-  load: () => grants.load("org_acme"),
-  save: (refreshToken) => grants.save("org_acme", refreshToken),
-};
-
-const client = new TeachMeHipaa({
-  tokenProvider: partnerGrantTokenProvider({
-    clientId: process.env.TMH_APP_ID!,
-    clientSecret: process.env.TMH_APP_SECRET!,
-    tokenStore,
-  }),
-  organizationId: "org_acme",
-});
-
-const learners = await client.learners.list();
-console.log(learners.items.length);
-```
-
-A Grant belongs to one Environment, so give the provider the same
-`environment` (or `baseUrl`) as the client. The provider exposes the one it
-exchanges Refresh tokens at as `baseUrl`, and the client throws a `TypeError`
-at construction when it differs from its own, rather than sending Sandbox
-requests with tokens refreshed against Live.
-
-> [!WARNING]
-> Presenting a superseded Refresh token revokes the whole Grant (ADR-0004). So
-> `tokenStore.save` must persist durably before it resolves, you should create
-> one provider per Grant and share it between clients, and a Refresh token
-> exchange is **never retried**: a network error during one raises
-> `ConnectionError`, and an `OAuthError` with code `invalid_grant` means the
-> Organization must go through consent again. Never retry these yourself with
-> an old Refresh token.
-
-For the Partner's own calls, such as listing and creating customer
-Organizations, authenticate with the Partner app's own id (`app_…`) and secret
-(`tmh_as_…`) as `clientId` and `clientSecret`, and pass your `partnerId`:
-
-```ts sample=partner-organizations
-import TeachMeHipaa from "teachmehipaa";
-
-const partner = new TeachMeHipaa({
-  clientId: process.env.TMH_APP_ID!,
-  clientSecret: process.env.TMH_APP_SECRET!,
-});
-
-for await (const organization of partner.partners.organizations.list(
-  "ptn_01JD8E2C3D4E5F6G7H8J9K0M1N",
-)) {
-  console.log(organization.orgId, organization.grantActive);
-}
-```
-
-If you get Access tokens some other way, pass
-`tokenProvider: staticTokenProvider(accessToken)`. A static token is never
-renewed; once it expires, calls raise `AuthenticationError`.
-
 ## Tailing the Event log
 
 `events.tail` reads the Event log oldest first and keeps its own position in
@@ -616,26 +503,30 @@ const client = new TeachMeHipaa({
 console.log(typeof client.learners.list);
 ```
 
-| Option           | Default                               | Description                                                                        |
-| ---------------- | ------------------------------------- | ---------------------------------------------------------------------------------- |
-| `clientId`       | None: public methods only             | Your API client's id (`cli_…`), or a Partner app's (`app_…`)                       |
-| `clientSecret`   | (required with `clientId`)            | The matching secret (`tmh_cs_…` or `tmh_as_…`)                                     |
-| `scopes`         | Every Scope the API client holds      | Narrows the Access token's Scopes                                                  |
-| `tokenProvider`  | Client credentials                    | Supplies Access tokens instead: `partnerGrantTokenProvider`, `staticTokenProvider` |
-| `environment`    | `"live"`                              | `"live"` or `"sandbox"`; credentials work only in their own Environment            |
-| `baseUrl`        | The Environment's URL                 | Overrides it, e.g. to point at a mock server                                       |
-| `organizationId` | Looked up once with `auth.introspect` | The Organization to act for                                                        |
-| `maxRetries`     | `2`                                   | Retries of a failed call that is safe to replay                                    |
-| `timeout`        | `80000`                               | Milliseconds to wait for each response                                             |
-| `appInfo`        | None                                  | `{ name, version?, url? }` of your software, sent in the `User-Agent`              |
-| `logger`         | None                                  | Opt-in request logging; see [Logging](#logging)                                    |
-| `fetch`          | `globalThis.fetch`                    | A `fetch` to send requests with, e.g. one with a proxy dispatcher                  |
-| `transport`      | A `fetch` transport                   | Replaces the HTTP layer entirely, e.g. with a fake in tests (not with `fetch`)     |
-| `clock`          | Real time                             | Supplies the time and sleeps, for tests                                            |
+| Option           | Default                               | Description                                                                    |
+| ---------------- | ------------------------------------- | ------------------------------------------------------------------------------ |
+| `clientId`       | None: public methods only             | Your API client's id (`cli_…`)                                                 |
+| `clientSecret`   | (required with `clientId`)            | The matching secret (`tmh_cs_…`)                                               |
+| `scopes`         | Every Scope the API client holds      | Narrows the Access token's Scopes                                              |
+| `tokenProvider`  | Client credentials                    | Supplies Access tokens instead, e.g. `staticTokenProvider`                     |
+| `environment`    | `"live"`                              | `"live"` or `"sandbox"`; credentials work only in their own Environment        |
+| `baseUrl`        | The Environment's URL                 | Overrides it, e.g. to point at a mock server                                   |
+| `organizationId` | Looked up once with `auth.introspect` | The Organization to act for                                                    |
+| `maxRetries`     | `2`                                   | Retries of a failed call that is safe to replay                                |
+| `timeout`        | `80000`                               | Milliseconds to wait for each response                                         |
+| `appInfo`        | None                                  | `{ name, version?, url? }` of your software, sent in the `User-Agent`          |
+| `logger`         | None                                  | Opt-in request logging; see [Logging](#logging)                                |
+| `fetch`          | `globalThis.fetch`                    | A `fetch` to send requests with, e.g. one with a proxy dispatcher              |
+| `transport`      | A `fetch` transport                   | Replaces the HTTP layer entirely, e.g. with a fake in tests (not with `fetch`) |
+| `clock`          | Real time                             | Supplies the time and sleeps, for tests                                        |
 
 Base URLs: Live is `https://api.tme.so/v1`; Sandbox is
 `https://api-teachmehipaa-dev.web.app/v1`. Unknown options raise a
 `TypeError` when you create the client, so a typo fails fast.
+
+If you get Access tokens some other way, pass
+`tokenProvider: staticTokenProvider(accessToken)`. A static token is never
+renewed; once it expires, calls raise `AuthenticationError`.
 
 ## Logging
 

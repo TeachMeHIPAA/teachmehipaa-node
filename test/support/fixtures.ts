@@ -58,38 +58,3 @@ export const learnerBody = {
 export const learnerReply = (
   headers: Readonly<Record<string, string>> = {},
 ): ScriptedReply => ({ json: learnerBody, headers });
-
-export const APP_ID = "app_01JD7Z3M1V4Q8T2K5N9R6W0XYZ";
-export const APP_SECRET = "tmh_as_cGFydG5lci1zZWNyZXQ";
-/** `Basic base64("app_…:tmh_as_…")`, encoded outside the SDK. */
-export const APP_BASIC_AUTHORIZATION =
-  "Basic YXBwXzAxSkQ3WjNNMVY0UThUMks1TjlSNlcwWFlaOnRtaF9hc19jR0Z5ZEc1bGNpMXpaV055WlhR";
-export const REFRESH_TOKEN_1 = "tmh_rt_grt_01JD81QW3E4R5T6Y7U8I9O0PAS.first";
-export const REFRESH_TOKEN_2 = "tmh_rt_grt_01JD81QW3E4R5T6Y7U8I9O0PAS.second";
-export const REFRESH_TOKEN_3 = "tmh_rt_grt_01JD81QW3E4R5T6Y7U8I9O0PAS.third";
-
-/** `dev#/components/schemas/AuthorizationCodeTokenResponse`. */
-export const grantTokenReply = (
-  accessToken: string,
-  refreshToken: string,
-  expiresIn = 900,
-): ScriptedReply => ({
-  json: {
-    access_token: accessToken,
-    token_type: "Bearer",
-    expires_in: expiresIn,
-    refresh_token: refreshToken,
-    scope: "learners:read learners:write",
-  },
-  headers: { "cache-control": "no-store", pragma: "no-cache" },
-});
-
-/** `dev#/components/schemas/OAuthTokenError`. */
-export const oauthErrorReply = (
-  error: string,
-  description: string,
-  status = 400,
-): ScriptedReply => ({
-  status,
-  json: { error, error_description: description },
-});

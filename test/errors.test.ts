@@ -17,7 +17,6 @@ import TeachMeHipaa, {
   TimeoutError,
   WebhookSignatureError,
   operationIdFromName,
-  partnerGrantTokenProvider,
   staticTokenProvider,
 } from "../src/index.js";
 import {
@@ -308,30 +307,12 @@ describe("Errors", () => {
 });
 
 describe("Usage errors", () => {
-  const partnerGrantWithoutStore = () =>
-    partnerGrantTokenProvider({
-      clientId: "app_x",
-      clientSecret: "tmh_as_x",
-    } as never);
-
   it.each<[string, () => unknown]>([
     [
       "the client constructor",
       () => new TeachMeHipaa({ clientId: "cli_x" } as never),
     ],
-    ["partnerGrantTokenProvider", partnerGrantWithoutStore],
     ["staticTokenProvider", () => staticTokenProvider("")],
-    [
-      "oauth.authorizeUrl",
-      () =>
-        TeachMeHipaa.oauth.authorizeUrl({
-          clientId: "",
-          redirectUri: "https://partner.example/callback",
-          scopes: [],
-          state: "s",
-          codeChallenge: "c",
-        }),
-    ],
     ["operationIdFromName", () => operationIdFromName("operations/x")],
   ])(
     "raises a mistake in calling %s as a TypeError prefixed teachmehipaa:",

@@ -1,12 +1,9 @@
 // What README samples import as "teachmehipaa" when the README test runs
-// them: the real library, with every client and token endpoint wired to the
-// test's fake transport and clock instead of the network.
+// them: the real library, with every client wired to the test's fake
+// transport and clock instead of the network.
 import {
   TeachMeHipaa as RealTeachMeHipaa,
-  partnerGrantTokenProvider as realPartnerGrantTokenProvider,
   type Clock,
-  type PartnerGrantOptions,
-  type PartnerGrantTokenProvider,
   type TeachMeHipaaOptions,
   type Transport,
 } from "../../src/index.js";
@@ -45,10 +42,5 @@ export class TeachMeHipaa extends RealTeachMeHipaa {
     super(withFakes(options));
   }
 }
-
-export const partnerGrantTokenProvider = (
-  options: PartnerGrantOptions,
-): PartnerGrantTokenProvider =>
-  realPartnerGrantTokenProvider(withFakes(options));
 
 export default TeachMeHipaa;

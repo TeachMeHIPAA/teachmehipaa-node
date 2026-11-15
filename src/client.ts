@@ -4,7 +4,6 @@ import {
   type ResolvedConfig,
 } from "./core/config.js";
 import { errors } from "./core/errors.js";
-import { oauth } from "./core/oauth.js";
 import { createRequester } from "./core/requester.js";
 import { webhooks } from "./core/webhooks.js";
 import {
@@ -56,7 +55,7 @@ const createClientRequester = (options: TeachMeHipaaOptions) => {
 };
 
 /**
- * A client for one set of credentials (an API client's, or a Grant's through
+ * A client for one set of credentials (an API client's, or Access tokens from
  * a token provider) and one Organization, or for public lookups with no
  * credentials at all. Its configuration is fixed at construction; create
  * another client to change it.
@@ -69,11 +68,6 @@ export class TeachMeHipaa extends ApiResources {
    * that hold no API credentials can use this or the `webhooks` export.
    */
   static readonly webhooks = webhooks;
-  /**
-   * Consent helpers for Partner apps: PKCE pairs, the consent URL and the
-   * code exchange. They need no client.
-   */
-  static readonly oauth = oauth;
   /** The same as `TeachMeHipaa.webhooks`. */
   readonly webhooks = webhooks;
 
