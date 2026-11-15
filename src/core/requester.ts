@@ -40,6 +40,11 @@ export interface RequestSpec {
   /** Org-scoped paths are prefixed with `/organizations/{orgId}`. */
   readonly organizationScoped: boolean;
   /**
+   * The IR's `security`: `false` for public methods (`security: none`), which
+   * are sent without an Access token so none is minted for them.
+   */
+  readonly authenticated: boolean;
+  /**
    * The IR's `retrySafe`: GETs, operations that take an Idempotency-Key, and
    * those idempotent by meaning. PATCH and DELETE never are.
    */
@@ -109,6 +114,7 @@ interface PreparedCall {
   readonly timeout: number;
   readonly maxRetries: number;
   readonly retrySafe: boolean;
+  readonly authenticated: boolean;
   readonly expected: ExpectedResponse;
   /** The call sent `If-None-Match`, so a 304 is a success. */
   readonly conditionalRead: boolean;
@@ -250,13 +256,16 @@ export const createRequester = (settings: RequesterSettings): Requester => {
 
   const exchange = async <T extends object>(
     call: PreparedCall,
-    accessToken: string,
+    accessToken: string | null,
   ): Promise<Attempt<WithLastResponse<T>>> => {
     const received = await settings
       .transport({
         method: call.method,
         url: call.url,
-        headers: { ...call.headers, authorization: `Bearer ${accessToken}` },
+        headers:
+          accessToken === null
+            ? call.headers
+            : { ...call.headers, authorization: `Bearer ${accessToken}` },
         ...(call.body === undefined ? {} : { body: call.body }),
         timeout: call.timeout,
       })
@@ -318,6 +327,9 @@ export const createRequester = (settings: RequesterSettings): Requester => {
     // happens inside an attempt, so it never uses up a retry, and a 401 comes
     // before the API acts, so replaying even a PATCH is safe.
     const attempt = async (): Promise<Attempt<WithLastResponse<T>>> => {
+      if (!call.authenticated) {
+        return exchange<T>(call, null);
+      }
       const accessToken = await tokenProvider.getAccessToken();
       const outcome = await exchange<T>(call, accessToken);
       if (outcome.ok || replayed || !isUnauthorized(outcome.error)) {
@@ -385,6 +397,7 @@ export const createRequester = (settings: RequesterSettings): Requester => {
       timeout: options.timeout ?? settings.timeout,
       maxRetries: options.maxRetries ?? settings.maxRetries,
       retrySafe: spec.retrySafe,
+      authenticated: spec.authenticated,
       expected,
       conditionalRead: spec.ifNoneMatch !== undefined,
     };
@@ -397,6 +410,7 @@ export const createRequester = (settings: RequesterSettings): Requester => {
           method: "GET",
           path: "/auth/introspection",
           organizationScoped: false,
+          authenticated: true,
           retrySafe: true,
           idempotencyKey: "none",
         },

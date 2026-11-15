@@ -8,9 +8,10 @@ import { EventsBase, type EventListParams } from "../resources/events.js";
 export interface EventTailParams extends Omit<EventListParams, "after"> {
   /**
    * Yield only Events after this id (exclusive), such as a saved
-   * `lastEventId`. Omit it to start at the oldest retained Event.
+   * `lastEventId`. Omit it, or pass `undefined` (nothing saved yet), to
+   * start at the oldest retained Event.
    */
-  readonly after?: string;
+  readonly after?: string | undefined;
   /** Once caught up, keep polling for new Events instead of returning. */
   readonly follow?: boolean;
   /** Milliseconds between polls once caught up in follow mode. Defaults to 2000. */

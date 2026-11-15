@@ -188,6 +188,7 @@ const withMethods = <TResponse>(
       path: "/operations/{operationId}",
       pathParams: { operationId },
       organizationScoped: true,
+      authenticated: true,
       retrySafe: true,
       idempotencyKey: "none",
     });

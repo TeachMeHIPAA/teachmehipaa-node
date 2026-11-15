@@ -41,6 +41,7 @@ export class Members {
         method: "GET",
         path: "/members",
         organizationScoped: true,
+        authenticated: true,
         retrySafe: true,
         idempotencyKey: "none",
         query: {
@@ -69,6 +70,7 @@ export class Members {
       path: "/members/{subjectId}",
       pathParams: { subjectId },
       organizationScoped: true,
+      authenticated: true,
       retrySafe: true,
       idempotencyKey: "none",
       options,

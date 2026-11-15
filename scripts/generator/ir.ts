@@ -114,6 +114,10 @@ export type IrResponse =
 
 export type Requirement = "required" | "optional" | "none";
 
+export type IrSecurity =
+  | { readonly kind: "none" }
+  | { readonly kind: "bearer"; readonly anyOf: readonly (readonly string[])[] };
+
 export interface IrMethod {
   readonly name: string;
   readonly operationId: string;
@@ -141,6 +145,7 @@ export interface IrMethod {
   readonly ifMatch: Requirement;
   readonly ifNoneMatch: Requirement;
   readonly retrySafe: boolean;
+  readonly security: IrSecurity;
 }
 
 export interface IrResource {

@@ -336,6 +336,11 @@ const methodSource = (
           )
           .join(", ")} }`;
 
+  // The Organization is resolved from the Access token, which a public
+  // method never has.
+  if (method.orgScoped && method.security.kind === "none") {
+    throw new Error(`${where}: an org-scoped method needs bearer security`);
+  }
   const response = method.response;
   const conditionalWrite = method.ifMatch !== "none";
   const conditionalRead = method.ifNoneMatch !== "none";
@@ -385,6 +390,7 @@ const methodSource = (
             .join(", ")} }`,
         ]),
     `organizationScoped: ${String(method.orgScoped)}`,
+    `authenticated: ${String(method.security.kind !== "none")}`,
     `retrySafe: ${String(method.retrySafe)}`,
     // An optional key is the caller's to give through `idempotencyKey`.
     `idempotencyKey: ${literal(method.idempotencyKey === "required" ? "required" : "none")}`,

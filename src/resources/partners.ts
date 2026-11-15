@@ -28,6 +28,7 @@ export class Partners {
       path: "/partners/{partnerId}",
       pathParams: { partnerId },
       organizationScoped: false,
+      authenticated: true,
       retrySafe: true,
       idempotencyKey: "none",
       options,

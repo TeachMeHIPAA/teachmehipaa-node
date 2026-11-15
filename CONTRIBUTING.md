@@ -1,5 +1,19 @@
 # Contributing
 
+## Setup
+
+Use the Node version in `.nvmrc` (any Node 20 or newer works; `npm run
+generate` needs 22.18 or newer), then:
+
+```sh
+npm ci
+npm run lint        # ESLint and Prettier
+npm run typecheck   # tsc --noEmit over src, test and scripts
+npm test            # unit tests and the README doc test
+npm run build       # ESM and CJS bundles with declarations, into dist/
+npm run check:dist  # loads dist/ as ESM and CJS; type-checks the README against it
+```
+
 ## Generated and hand-written code
 
 The library is a hand-written core plus a resource and model layer generated
@@ -42,3 +56,86 @@ operationId and a type from that file to `OPERATION_RESPONSES` in
 3. Run `npm test`. The generated-surface test fails if the committed output
    differs from what the generator writes, or if any spec operation lacks
    exactly one public method.
+4. Run `npm run test:contract`, add the new operations to the contract suite
+   if they belong to a resource family it doesn't cover yet, and add a
+   CHANGELOG entry.
+
+The generator reads these IR method fields into each request it emits:
+`orgScoped` (prefix the path with the client's Organization), `security`
+(`none` sends no Access token), `retrySafe`, `idempotencyKey`, `ifMatch`,
+`ifNoneMatch`, the request body's content type and binary parts, and the
+response kind.
+
+## Tests
+
+| Command                 | What it runs                                                                                              |
+| ----------------------- | --------------------------------------------------------------------------------------------------------- |
+| `npm test`              | Unit tests: the public client with a fake transport, webhook vectors, generated coverage, the README test |
+| `npm run test:contract` | The client against a Prism mock of `openapi/openapi.developer.json`                                       |
+| `npm run test:sandbox`  | Read-only smoke test against the real Sandbox; skipped without credentials                                |
+
+Unit tests cross only the seams agreed in the spec: the public client with a
+fake transport injected (`test/support/fake-transport.ts`) and a fake clock,
+the pure webhook functions, and the generated surface. Take expected values
+from the spec, the research docs or worked examples, never from the code
+under test. No test calls the live API.
+
+### README samples
+
+`test/readme.test.ts` keeps the README honest. Every TypeScript block in the
+README must carry an id in its info string, as in ` ```ts sample=quickstart `.
+The test type-checks every sample with the repo's compiler settings, and runs
+each runnable sample against the fake transport, with `"teachmehipaa"`
+pointing at `test/readme/runtime.ts`, then checks what it printed and sent. A
+sample that can't run (it touches the disk or starts a server) is listed in
+`TYPE_CHECKED_ONLY` with the reason. A sample that uses `client` without
+creating it gets the Quickstart's client prepended. To add a sample, give it
+an id and add a `runs(...)` case or a `TYPE_CHECKED_ONLY` entry.
+
+### Contract suite
+
+`npm run test:contract` starts Prism (`@stoplight/prism-cli`, a dev
+dependency) on a free port from `test/contract/prism.ts`, and runs
+`test/contract/contract.test.ts`, one representative call per resource
+family, against it. The client uses `staticTokenProvider` and an explicit
+`organizationId`, since Prism can't mock the form-encoded token endpoint.
+Prism answers a request that breaks the spec with a 4xx, which fails the
+call, and the suite also fails on any request violation Prism reports in
+`sl-violations`.
+
+Prism serves static responses built from the spec's schemas. `--dynamic` and
+`--errors` are off on purpose: Prism's own generated responses break the spec
+(static strings ignore `pattern`; dynamic numbers break OpenAPI 3.1
+`exclusiveMinimum`), so either flag makes valid SDK requests fail. Response
+violations are therefore ignored; the suite still checks that each response
+reads into the typed model.
+
+### Sandbox smoke test
+
+```sh
+TMH_SANDBOX_CLIENT_ID=cli_… TMH_SANDBOX_CLIENT_SECRET=tmh_cs_… npm run test:sandbox
+```
+
+It introspects the token, lists Courses and lists Learners in the Sandbox
+Environment. It never writes, and CI never runs it.
+
+## Releasing
+
+Releases go out from `.github/workflows/release.yml`, which runs only when
+dispatched by hand. A run with `publish` unchecked (the default) runs lint,
+type checks, unit and contract tests, the build, `check:dist` and
+`npm pack --dry-run`, and publishes nothing. With `publish` checked it then
+runs `npm publish --provenance --access public` through npm trusted
+publishing (OIDC, no npm token stored in the repo).
+
+`package.json` keeps `"private": true` until launch, so a `publish` run
+fails at `npm publish` (`EPRIVATE`) even if dispatched by mistake. To ship:
+
+1. On npm, configure trusted publishing for the `teachmehipaa` package:
+   repository `TeachMeHIPAA/teachmehipaa-node`, workflow `release.yml`.
+2. In one PR: remove `"private": true`, set `version` (1.0.0 for the
+   first release), and move the CHANGELOG's Unreleased entry under that
+   version with the date.
+3. After it merges, dispatch **Release** on `main` once without `publish`
+   and check the packed file list, then again with `publish` checked.
+4. Tag the release commit `v<version>`.

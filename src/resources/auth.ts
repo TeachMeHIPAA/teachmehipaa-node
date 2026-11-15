@@ -23,6 +23,7 @@ export class Auth {
       method: "GET",
       path: "/auth/introspection",
       organizationScoped: false,
+      authenticated: true,
       retrySafe: true,
       idempotencyKey: "none",
       options,

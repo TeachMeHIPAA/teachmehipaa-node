@@ -23,6 +23,7 @@ export class Seats {
       method: "GET",
       path: "/seats",
       organizationScoped: true,
+      authenticated: true,
       retrySafe: true,
       idempotencyKey: "none",
       options,

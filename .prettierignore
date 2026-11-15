@@ -3,3 +3,4 @@ coverage/
 docs/
 package-lock.json
 openapi/
+test/readme/.generated/

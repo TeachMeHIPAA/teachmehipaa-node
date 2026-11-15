@@ -23,6 +23,7 @@ export class Operations {
       path: "/operations/{operationId}",
       pathParams: { operationId },
       organizationScoped: true,
+      authenticated: true,
       retrySafe: true,
       idempotencyKey: "none",
       options,

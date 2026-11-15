@@ -34,15 +34,19 @@
   ],
   "scripts": {
     "build": "tsup",
-    "check:dist": "node scripts/check-dist.mjs",
+    "check:dist": "node scripts/check-dist.mjs && TMH_README_TYPES=dist vitest run test/readme.test.ts -t \"type-checks every sample\"",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "generate": "node scripts/generate.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:contract": "vitest run --config vitest.contract.config.ts",
+    "test:sandbox": "vitest run --config vitest.sandbox.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
+    "@stoplight/prism-cli": "5.16.0",
+    "@types/express": "5.0.3",
     "@types/node": "20.19.43",
     "ajv": "8.17.1",
     "eslint": "9.39.5",
@@ -52,5 +56,8 @@
     "typescript": "5.9.3",
     "typescript-eslint": "8.72.2",
     "vitest": "3.2.7"
+  },
+  "scarfSettings": {
+    "enabled": false
   }
 }

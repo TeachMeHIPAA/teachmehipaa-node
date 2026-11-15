@@ -35,6 +35,7 @@ export class EventsBase {
         method: "GET",
         path: "/events",
         organizationScoped: true,
+        authenticated: true,
         retrySafe: true,
         idempotencyKey: "none",
         query: {

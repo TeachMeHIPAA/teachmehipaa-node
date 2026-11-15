@@ -25,6 +25,7 @@ export class CertificateVerifications {
       path: "/certificate-verifications/{tinyId}",
       pathParams: { tinyId },
       organizationScoped: false,
+      authenticated: false,
       retrySafe: true,
       idempotencyKey: "none",
       options,

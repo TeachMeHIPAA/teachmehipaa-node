@@ -54,6 +54,7 @@ export class AuditEvents {
         method: "GET",
         path: "/audit-events",
         organizationScoped: true,
+        authenticated: true,
         retrySafe: true,
         idempotencyKey: "none",
         query: {

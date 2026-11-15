@@ -30,6 +30,7 @@ export class Compliance {
       method: "GET",
       path: "/compliance",
       organizationScoped: true,
+      authenticated: true,
       retrySafe: true,
       idempotencyKey: "none",
       query: { courseId: params?.courseId },
