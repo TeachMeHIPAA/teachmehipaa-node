@@ -24,7 +24,7 @@ describe.skipIf(credentials === null)("Sandbox smoke test", () => {
   it("introspects the Access token for an Organization in Sandbox mode", async () => {
     const introspection = await client().auth.introspect();
 
-    expect(introspection.mode).toBe("sandbox");
+    expect(introspection.mode).toBe("test");
     expect(introspection.orgId).toEqual(expect.any(String));
   });
 
