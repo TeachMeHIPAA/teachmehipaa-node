@@ -13,6 +13,7 @@ import TeachMeHipaa, {
   RateLimitError,
   TeachMeHipaaError,
   TimeoutError,
+  WebhookSignatureError,
 } from "../src/index.js";
 import {
   createFakeTransport,
@@ -290,6 +291,7 @@ describe("Errors", () => {
       OAuthError,
       ConnectionError,
       TimeoutError,
+      WebhookSignatureError,
     });
   });
 });

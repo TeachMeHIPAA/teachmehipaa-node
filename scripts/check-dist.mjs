@@ -10,10 +10,12 @@ assert.equal(typeof esm.default, "function", "ESM default export");
 assert.equal(esm.default, esm.TeachMeHipaa, "ESM named export");
 assert.equal(typeof new esm.default(options).learners.retrieve, "function");
 assert.equal(typeof esm.TeachMeHipaaError, "function");
+assert.equal(typeof esm.webhooks.constructEvent, "function", "ESM webhooks");
 
 const cjs = createRequire(import.meta.url)("teachmehipaa");
 assert.equal(typeof cjs.TeachMeHipaa, "function", "CJS named export");
 assert.equal(cjs.default, cjs.TeachMeHipaa, "CJS default export");
 assert.equal(typeof new cjs.TeachMeHipaa(options).learners, "object");
+assert.equal(cjs.TeachMeHipaa.webhooks, cjs.webhooks, "CJS webhooks");
 
 console.log("dist: ESM and CJS entry points load");

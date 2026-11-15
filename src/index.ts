@@ -1,6 +1,7 @@
 import { TeachMeHipaa } from "./client.js";
 
 export { TeachMeHipaa };
+export { webhooks } from "./core/webhooks.js";
 export {
   ApiError,
   AuthenticationError,
@@ -15,9 +16,16 @@ export {
   RateLimitError,
   TeachMeHipaaError,
   TimeoutError,
+  WebhookSignatureError,
 } from "./core/errors.js";
-export type { FieldError } from "./core/errors.js";
+export type { FieldError, WebhookSignatureErrorCode } from "./core/errors.js";
 export type { TeachMeHipaaOptions } from "./client.js";
+export type {
+  ConstructEventOptions,
+  GenerateTestHeadersParams,
+  WebhookHeaders,
+  Webhooks,
+} from "./core/webhooks.js";
 export type { Environment } from "./core/config.js";
 export type { Clock } from "./core/clock.js";
 export type { AppInfo } from "./core/user-agent.js";

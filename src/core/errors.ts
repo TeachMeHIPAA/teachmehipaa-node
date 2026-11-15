@@ -126,6 +126,39 @@ export class TimeoutError extends ConnectionError {
   override readonly name: string = "TimeoutError";
 }
 
+/** Why a Delivery failed verification; branch on `code`. */
+export type WebhookSignatureErrorCode =
+  | "missing_header"
+  | "invalid_timestamp"
+  | "timestamp_outside_tolerance"
+  | "body_hash_mismatch"
+  | "signature_mismatch";
+
+/**
+ * A Delivery failed verification: treat it as forged and answer 400. It
+ * extends `TeachMeHipaaError` so one catch handles every library error, but
+ * it never carries the body or headers, which hold Learner details
+ * (ADR-0007) and would end up in error reporters.
+ */
+export class WebhookSignatureError extends TeachMeHipaaError {
+  override readonly name: string = "WebhookSignatureError";
+  declare readonly code: WebhookSignatureErrorCode;
+
+  constructor(code: WebhookSignatureErrorCode, message: string) {
+    super({
+      message,
+      status: null,
+      code,
+      title: null,
+      detail: null,
+      errors: [],
+      requestId: null,
+      headers: {},
+      raw: null,
+    });
+  }
+}
+
 /** Every error class, also reachable as `TeachMeHipaa.errors`. */
 export const errors = Object.freeze({
   TeachMeHipaaError,
@@ -141,4 +174,5 @@ export const errors = Object.freeze({
   OAuthError,
   ConnectionError,
   TimeoutError,
+  WebhookSignatureError,
 });

@@ -1,6 +1,7 @@
 import { resolveConfig, type ClientOptions } from "./core/config.js";
 import { errors } from "./core/errors.js";
 import { createRequester } from "./core/requester.js";
+import { webhooks } from "./core/webhooks.js";
 import { clientCredentialsTokenProvider } from "./core/token-provider.js";
 import { ApiResources } from "./resources/api-resources.js";
 
@@ -39,6 +40,13 @@ const createClientRequester = (options: TeachMeHipaaOptions) => {
 export class TeachMeHipaa extends ApiResources {
   /** Every error class, for `instanceof` checks without extra imports. */
   static readonly errors = errors;
+  /**
+   * Delivery verification, which needs only the Signing secret. Handlers
+   * that hold no API credentials can use this or the `webhooks` export.
+   */
+  static readonly webhooks = webhooks;
+  /** The same as `TeachMeHipaa.webhooks`. */
+  readonly webhooks = webhooks;
 
   constructor(options: TeachMeHipaaOptions) {
     super(createClientRequester(options));
