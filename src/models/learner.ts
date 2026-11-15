@@ -50,3 +50,11 @@ export interface Learner {
   /** The Learner's current Certificate, with its verification and PDF links. */
   readonly certificate: LearnerCertificate | null;
 }
+
+/** A one-time URL that signs a Learner straight into their Training. */
+export interface LearnerLaunchLink {
+  /** Single-use; redirect the Learner to it right away. */
+  readonly url: string;
+  /** ISO 8601; 5 minutes after it was created. */
+  readonly expiresAt: string;
+}

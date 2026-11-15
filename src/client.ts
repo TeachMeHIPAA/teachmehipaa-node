@@ -1,4 +1,5 @@
 import { resolveConfig, type ClientOptions } from "./core/config.js";
+import { errors } from "./core/errors.js";
 import { createRequester } from "./core/requester.js";
 import { clientCredentialsTokenProvider } from "./core/token-provider.js";
 import { Learners } from "./resources/learners.js";
@@ -10,6 +11,9 @@ export type TeachMeHipaaOptions = ClientOptions;
  * configuration is fixed at construction; create another client to change it.
  */
 export class TeachMeHipaa {
+  /** Every error class, for `instanceof` checks without extra imports. */
+  static readonly errors = errors;
+
   readonly learners: Learners;
 
   constructor(options: TeachMeHipaaOptions) {
@@ -22,6 +26,7 @@ export class TeachMeHipaa {
       userAgent: config.userAgent,
       transport: config.transport,
       timeout: config.timeout,
+      maxRetries: config.maxRetries,
       clock: config.clock,
     });
     const requester = createRequester({
@@ -30,7 +35,9 @@ export class TeachMeHipaa {
       transport: config.transport,
       tokenProvider,
       timeout: config.timeout,
+      maxRetries: config.maxRetries,
       organizationId: config.organizationId,
+      clock: config.clock,
     });
     this.learners = new Learners(requester);
   }

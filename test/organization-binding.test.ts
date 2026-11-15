@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import TeachMeHipaa, { TeachMeHipaaError } from "../src/index.js";
+import { createFakeClock } from "./support/fake-clock.js";
 import { createFakeTransport } from "./support/fake-transport.js";
 import {
   CLIENT_ID,
@@ -21,6 +22,7 @@ const clientOn = (
     clientId: CLIENT_ID,
     clientSecret: CLIENT_SECRET,
     transport: fake.transport,
+    clock: createFakeClock(),
     ...(organizationId === undefined ? {} : { organizationId }),
   });
 
@@ -69,18 +71,24 @@ describe("Organization binding", () => {
   });
 
   it("looks the Organization up again after a failed introspection", async () => {
+    const unavailable = {
+      status: 503,
+      headers: { "content-type": "application/problem+json" },
+      json: {
+        title: "Service Unavailable",
+        status: 503,
+        code: "temporarily_unavailable",
+      },
+    };
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, tokenReply())
-      .script(INTROSPECTION_ROUTE, {
-        status: 503,
-        headers: { "content-type": "application/problem+json" },
-        json: {
-          title: "Service Unavailable",
-          status: 503,
-          code: "temporarily_unavailable",
-        },
-      })
-      .script(INTROSPECTION_ROUTE, introspectionReply())
+      .script(
+        INTROSPECTION_ROUTE,
+        unavailable,
+        unavailable,
+        unavailable,
+        introspectionReply(),
+      )
       .script(LEARNER_ROUTE, learnerReply());
     const client = clientOn(fake);
 
@@ -91,7 +99,8 @@ describe("Organization binding", () => {
     const learner = await client.learners.retrieve(LEARNER_ID);
 
     expect(learner.lastResponse.status).toBe(200);
-    expect(fake.requestsTo(INTROSPECTION_ROUTE)).toHaveLength(2);
+    // Three tries for the first call (two retries), one for the second.
+    expect(fake.requestsTo(INTROSPECTION_ROUTE)).toHaveLength(4);
   });
 
   it("explains that organizationId is needed when the Access token has no Organization", async () => {

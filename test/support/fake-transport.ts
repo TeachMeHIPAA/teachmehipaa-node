@@ -5,6 +5,8 @@ export interface ScriptedReply {
   readonly headers?: Readonly<Record<string, string>>;
   readonly json?: unknown;
   readonly body?: string;
+  /** Sends the headers, then fails the body stream with this error. */
+  readonly bodyError?: Error;
 }
 
 export type ScriptStep =
@@ -32,10 +34,17 @@ const toResponse = (reply: ScriptedReply): Response => {
   if (reply.json !== undefined && !headers.has("content-type")) {
     headers.set("content-type", "application/json");
   }
+  const { bodyError } = reply;
   const body =
-    reply.json !== undefined
-      ? JSON.stringify(reply.json)
-      : (reply.body ?? null);
+    bodyError !== undefined
+      ? new ReadableStream({
+          start: (controller) => {
+            controller.error(bodyError);
+          },
+        })
+      : reply.json !== undefined
+        ? JSON.stringify(reply.json)
+        : (reply.body ?? null);
   return new Response(body, { status: reply.status ?? 200, headers });
 };
 

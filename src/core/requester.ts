@@ -1,12 +1,20 @@
+import { randomUUID } from "node:crypto";
+import type { Clock } from "./clock.js";
 import { TeachMeHipaaError } from "./errors.js";
 import { createOrganizationBinding } from "./organization.js";
-import { errorFromResponse, readBody } from "./problem.js";
+import { connectionError, errorFromResponse, readBody } from "./problem.js";
 import type { RequestOptions } from "./request-options.js";
 import {
   responseMetadata,
   withLastResponse,
   type WithLastResponse,
 } from "./response.js";
+import {
+  isTransient,
+  serverDelay,
+  withRetries,
+  type Attempt,
+} from "./retry.js";
 import type { TokenProvider } from "./token-provider.js";
 import type { HttpMethod, Transport } from "./transport.js";
 
@@ -14,6 +22,7 @@ export type QueryParams = Readonly<
   Record<string, string | number | boolean | undefined>
 >;
 
+/** Describes one API operation call. The generated layer builds these. */
 export interface RequestSpec {
   readonly method: HttpMethod;
   /** Path template relative to the base URL, e.g. `/learners/{learnerId}`. */
@@ -21,9 +30,26 @@ export interface RequestSpec {
   readonly pathParams?: Readonly<Record<string, string>>;
   /** Org-scoped paths are prefixed with `/organizations/{orgId}`. */
   readonly organizationScoped: boolean;
+  /**
+   * The IR's `retrySafe`: GETs, operations that take an Idempotency-Key, and
+   * those idempotent by meaning. PATCH and DELETE never are.
+   */
+  readonly retrySafe: boolean;
+  /**
+   * The IR's `idempotencyKey`. When `required`, each call gets one generated
+   * key, reused by every retry, unless the caller passes their own.
+   */
+  readonly idempotencyKey: "required" | "none";
   readonly query?: QueryParams | undefined;
+  /** Serialized as JSON. */
+  readonly body?: unknown;
+  /** Defaults to `application/json` when there is a body. */
+  readonly contentType?: JsonContentType;
   readonly options?: RequestOptions | undefined;
 }
+
+export type JsonContentType =
+  "application/json" | "application/merge-patch+json";
 
 export interface RequesterSettings {
   readonly baseUrl: string;
@@ -31,12 +57,25 @@ export interface RequesterSettings {
   readonly transport: Transport;
   readonly tokenProvider: TokenProvider;
   readonly timeout: number;
+  readonly maxRetries: number;
   readonly organizationId: string | undefined;
+  readonly clock: Clock;
 }
 
 /** Sends API requests with auth, the Organization binding and error mapping. */
 export interface Requester {
   request<T extends object>(spec: RequestSpec): Promise<WithLastResponse<T>>;
+}
+
+/** A call with its path resolved and its per-call values fixed. */
+interface PreparedCall {
+  readonly method: HttpMethod;
+  readonly url: string;
+  readonly headers: Readonly<Record<string, string>>;
+  readonly body: string | undefined;
+  readonly timeout: number;
+  readonly maxRetries: number;
+  readonly retrySafe: boolean;
 }
 
 const expandPath = (
@@ -62,45 +101,117 @@ const queryString = (query: QueryParams | undefined): string => {
   return encoded === "" ? "" : `?${encoded}`;
 };
 
+const isUnauthorized = (error: TeachMeHipaaError): boolean =>
+  error.status === 401 && error.code === "unauthorized";
+
 export const createRequester = (settings: RequesterSettings): Requester => {
-  const send = async <T extends object>(
-    method: HttpMethod,
-    path: string,
-    query: QueryParams | undefined,
-    options: RequestOptions,
-  ): Promise<WithLastResponse<T>> => {
-    const accessToken = await settings.tokenProvider.getAccessToken();
-    const response = await settings.transport({
-      method,
-      url: `${settings.baseUrl}${path}${queryString(query)}`,
-      headers: {
-        authorization: `Bearer ${accessToken}`,
-        accept: "application/json",
-        "user-agent": settings.userAgent,
-        ...(options.requestId === undefined
-          ? {}
-          : { "x-request-id": options.requestId }),
-      },
-      timeout: options.timeout ?? settings.timeout,
-    });
-    const body = await readBody(response);
+  const { clock } = settings;
+
+  const exchange = async <T extends object>(
+    call: PreparedCall,
+    accessToken: string,
+  ): Promise<Attempt<WithLastResponse<T>>> => {
+    const received = await settings
+      .transport({
+        method: call.method,
+        url: call.url,
+        headers: { ...call.headers, authorization: `Bearer ${accessToken}` },
+        ...(call.body === undefined ? {} : { body: call.body }),
+        timeout: call.timeout,
+      })
+      .then(async (response) => ({ response, body: await readBody(response) }))
+      .catch((cause: unknown) => connectionError(cause, call.timeout));
+    if (received instanceof TeachMeHipaaError) {
+      return { ok: false, error: received };
+    }
+    const { response, body } = received;
     if (
       !response.ok ||
       !body.json ||
       typeof body.value !== "object" ||
       body.value === null
     ) {
-      throw errorFromResponse(response, body);
+      return {
+        ok: false,
+        error: errorFromResponse(response, body, clock.now()),
+      };
     }
-    return withLastResponse(body.value as T, responseMetadata(response));
+    return {
+      ok: true,
+      value: withLastResponse(body.value as T, responseMetadata(response)),
+    };
+  };
+
+  const send = <T extends object>(
+    call: PreparedCall,
+  ): Promise<WithLastResponse<T>> => {
+    const { tokenProvider } = settings;
+    let replayed = false;
+    // A token revoked mid-flight gets one re-mint and replay per call. It
+    // happens inside an attempt, so it never uses up a retry, and a 401 comes
+    // before the API acts, so replaying even a PATCH is safe.
+    const attempt = async (): Promise<Attempt<WithLastResponse<T>>> => {
+      const accessToken = await tokenProvider.getAccessToken();
+      const outcome = await exchange<T>(call, accessToken);
+      if (outcome.ok || replayed || !isUnauthorized(outcome.error)) {
+        return outcome;
+      }
+      replayed = true;
+      tokenProvider.invalidate(accessToken);
+      return exchange<T>(call, await tokenProvider.getAccessToken());
+    };
+    return withRetries(attempt, {
+      maxRetries: call.maxRetries,
+      clock,
+      delayBeforeRetry: (error, retryNumber) =>
+        call.retrySafe && isTransient(error)
+          ? serverDelay(error, retryNumber, clock.now())
+          : null,
+    });
+  };
+
+  // Runs once per call, so everything fixed here (the Idempotency-Key above
+  // all) is identical on every retry.
+  const prepare = (spec: RequestSpec, path: string): PreparedCall => {
+    const options = spec.options ?? {};
+    const idempotencyKey =
+      options.idempotencyKey ??
+      (spec.idempotencyKey === "required" ? randomUUID() : undefined);
+    return {
+      method: spec.method,
+      url: `${settings.baseUrl}${path}${queryString(spec.query)}`,
+      headers: {
+        accept: "application/json",
+        "user-agent": settings.userAgent,
+        ...(spec.body === undefined
+          ? {}
+          : { "content-type": spec.contentType ?? "application/json" }),
+        ...(idempotencyKey === undefined
+          ? {}
+          : { "idempotency-key": idempotencyKey }),
+        ...(options.requestId === undefined
+          ? {}
+          : { "x-request-id": options.requestId }),
+      },
+      body: spec.body === undefined ? undefined : JSON.stringify(spec.body),
+      timeout: options.timeout ?? settings.timeout,
+      maxRetries: options.maxRetries ?? settings.maxRetries,
+      retrySafe: spec.retrySafe,
+    };
   };
 
   const organization = createOrganizationBinding(async () => {
     const introspection = await send<{ readonly orgId?: unknown }>(
-      "GET",
-      "/auth/introspection",
-      undefined,
-      {},
+      prepare(
+        {
+          method: "GET",
+          path: "/auth/introspection",
+          organizationScoped: false,
+          retrySafe: true,
+          idempotencyKey: "none",
+        },
+        "/auth/introspection",
+      ),
     );
     if (typeof introspection.orgId === "string" && introspection.orgId !== "") {
       return introspection.orgId;
@@ -128,7 +239,7 @@ export const createRequester = (settings: RequesterSettings): Requester => {
       const path = spec.organizationScoped
         ? `/organizations/${encodeURIComponent(await organization.organizationId())}${relative}`
         : relative;
-      return send<T>(spec.method, path, spec.query, spec.options ?? {});
+      return send<T>(prepare(spec, path));
     },
   };
 };
