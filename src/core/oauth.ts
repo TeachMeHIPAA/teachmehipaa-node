@@ -4,6 +4,7 @@ import {
   type TokenEndpointOptions,
 } from "./config.js";
 import { exchangeGrant, type GrantTokens } from "./grant-exchange.js";
+import { optionsValidator } from "./usage.js";
 
 /** A PKCE code verifier and the challenge to put on the consent URL. */
 export interface PkcePair {
@@ -68,15 +69,7 @@ export interface AuthorizeUrlParams {
   readonly authorizationUrl?: string;
 }
 
-const invalid = (message: string): TypeError =>
-  new TypeError(`TeachMeHipaa.oauth: ${message}`);
-
-const requireText = (value: unknown, name: string): string => {
-  if (typeof value !== "string" || value.trim() === "") {
-    throw invalid(`${name} must be a non-empty string`);
-  }
-  return value;
-};
+const { invalid, requireNonEmptyString } = optionsValidator("oauth");
 
 const consentBaseUrl = (params: AuthorizeUrlParams): string => {
   if (params.authorizationUrl !== undefined) {
@@ -100,13 +93,16 @@ const authorizeUrl = (params: AuthorizeUrlParams): string => {
   const url = new URL(consentBaseUrl(params));
   const query = new URLSearchParams({
     response_type: "code",
-    client_id: requireText(params.clientId, "clientId"),
-    redirect_uri: requireText(params.redirectUri, "redirectUri"),
+    client_id: requireNonEmptyString(params.clientId, "clientId"),
+    redirect_uri: requireNonEmptyString(params.redirectUri, "redirectUri"),
     scope: params.scopes.join(" "),
     // Without state, a forged redirect could attach an attacker's Grant to
     // the partner's session (RFC 6749 §10.12), so it is never optional.
-    state: requireText(params.state, "state"),
-    code_challenge: requireText(params.codeChallenge, "codeChallenge"),
+    state: requireNonEmptyString(params.state, "state"),
+    code_challenge: requireNonEmptyString(
+      params.codeChallenge,
+      "codeChallenge",
+    ),
     code_challenge_method: "S256",
   });
   // Form encoding writes spaces as `+`, which only form parsers read back.
@@ -142,14 +138,14 @@ const exchangeCode = async (
   const grant = await exchangeGrant(
     resolveTokenEndpoint(params),
     {
-      clientId: requireText(params.clientId, "clientId"),
-      clientSecret: requireText(params.clientSecret, "clientSecret"),
+      clientId: requireNonEmptyString(params.clientId, "clientId"),
+      clientSecret: requireNonEmptyString(params.clientSecret, "clientSecret"),
     },
     new URLSearchParams({
       grant_type: "authorization_code",
-      code: requireText(params.code, "code"),
-      redirect_uri: requireText(params.redirectUri, "redirectUri"),
-      code_verifier: requireText(params.codeVerifier, "codeVerifier"),
+      code: requireNonEmptyString(params.code, "code"),
+      redirect_uri: requireNonEmptyString(params.redirectUri, "redirectUri"),
+      code_verifier: requireNonEmptyString(params.codeVerifier, "codeVerifier"),
     }),
     CODE_EXCHANGE_GUIDANCE,
   );

@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
-import TeachMeHipaa, {
+import {
   ApiError,
   AuthenticationError,
   ConnectionError,
   OAuthError,
-  type ClientCredentialsOptions,
 } from "../src/index.js";
-import { createFakeClock } from "./support/fake-clock.js";
+import { clientOn, flushPendingWork } from "./support/client.js";
 import {
   createFakeTransport,
   type FakeTransport,
@@ -14,11 +13,8 @@ import {
   type ScriptedReply,
 } from "./support/fake-transport.js";
 import {
-  CLIENT_ID,
-  CLIENT_SECRET,
   LEARNER_ID,
   LEARNER_ROUTE,
-  ORG_ID,
   TOKEN_ROUTE,
   learnerReply,
   tokenReply,
@@ -49,39 +45,35 @@ const networkFailure: ScriptStep = () => {
   throw new TypeError("fetch failed");
 };
 
-const clientOn = (
-  fake: FakeTransport,
-  options: Partial<ClientCredentialsOptions> = {},
-) =>
-  new TeachMeHipaa({
-    clientId: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
-    organizationId: ORG_ID,
-    transport: fake.transport,
-    clock: createFakeClock(),
-    ...options,
-  });
-
 const authorizations = (fake: FakeTransport): readonly (string | undefined)[] =>
   fake.requestsTo(LEARNER_ROUTE).map((r) => r.headers.authorization);
-
-const flushPendingWork = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("401 replay", () => {
   it("re-mints the Access token once and replays the request", async () => {
     const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, tokenReply("jwt-1"), tokenReply("jwt-2"))
+      .script(
+        TOKEN_ROUTE,
+        tokenReply("access-token-1"),
+        tokenReply("access-token-2"),
+      )
       .script(LEARNER_ROUTE, unauthorized, learnerReply());
 
     const learner = await clientOn(fake).learners.retrieve(LEARNER_ID);
 
     expect(learner.lastResponse.status).toBe(200);
-    expect(authorizations(fake)).toEqual(["Bearer jwt-1", "Bearer jwt-2"]);
+    expect(authorizations(fake)).toEqual([
+      "Bearer access-token-1",
+      "Bearer access-token-2",
+    ]);
   });
 
   it("does not count the replay as a retry", async () => {
     const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, tokenReply("jwt-1"), tokenReply("jwt-2"))
+      .script(
+        TOKEN_ROUTE,
+        tokenReply("access-token-1"),
+        tokenReply("access-token-2"),
+      )
       .script(LEARNER_ROUTE, unauthorized, learnerReply());
 
     const learner = await clientOn(fake, { maxRetries: 0 }).learners.retrieve(
@@ -93,7 +85,11 @@ describe("401 replay", () => {
 
   it("still has every retry left after a replay", async () => {
     const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, tokenReply("jwt-1"), tokenReply("jwt-2"))
+      .script(
+        TOKEN_ROUTE,
+        tokenReply("access-token-1"),
+        tokenReply("access-token-2"),
+      )
       .script(
         LEARNER_ROUTE,
         unauthorized,
@@ -105,16 +101,20 @@ describe("401 replay", () => {
     await clientOn(fake).learners.retrieve(LEARNER_ID);
 
     expect(authorizations(fake)).toEqual([
-      "Bearer jwt-1",
-      "Bearer jwt-2",
-      "Bearer jwt-2",
-      "Bearer jwt-2",
+      "Bearer access-token-1",
+      "Bearer access-token-2",
+      "Bearer access-token-2",
+      "Bearer access-token-2",
     ]);
   });
 
   it("replays only once and then raises an AuthenticationError", async () => {
     const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, tokenReply("jwt-1"), tokenReply("jwt-2"))
+      .script(
+        TOKEN_ROUTE,
+        tokenReply("access-token-1"),
+        tokenReply("access-token-2"),
+      )
       .script(LEARNER_ROUTE, unauthorized, unauthorized);
 
     const error: unknown = await clientOn(fake)
@@ -128,7 +128,11 @@ describe("401 replay", () => {
 
   it("re-mints once when concurrent calls hit 401 with the same token", async () => {
     const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, tokenReply("jwt-1"), tokenReply("jwt-2"))
+      .script(
+        TOKEN_ROUTE,
+        tokenReply("access-token-1"),
+        tokenReply("access-token-2"),
+      )
       .script(
         LEARNER_ROUTE,
         unauthorized,
@@ -146,16 +150,16 @@ describe("401 replay", () => {
 
     expect(fake.requestsTo(TOKEN_ROUTE)).toHaveLength(2);
     expect(authorizations(fake)).toEqual([
-      "Bearer jwt-1",
-      "Bearer jwt-1",
-      "Bearer jwt-2",
-      "Bearer jwt-2",
+      "Bearer access-token-1",
+      "Bearer access-token-1",
+      "Bearer access-token-2",
+      "Bearer access-token-2",
     ]);
   });
 
   it("rejects the call when the re-mint fails, instead of leaving it pending", async () => {
     const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, tokenReply("jwt-1"), {
+      .script(TOKEN_ROUTE, tokenReply("access-token-1"), {
         status: 401,
         json: {
           error: "invalid_client",
@@ -179,13 +183,13 @@ describe("Access token mints", () => {
     ["a 5xx", unavailable],
   ])("retries a client-credentials mint after %s", async (_, failure) => {
     const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, failure, tokenReply("jwt-1"))
+      .script(TOKEN_ROUTE, failure, tokenReply("access-token-1"))
       .script(LEARNER_ROUTE, learnerReply());
 
     await clientOn(fake).learners.retrieve(LEARNER_ID);
 
     expect(fake.requestsTo(TOKEN_ROUTE)).toHaveLength(2);
-    expect(authorizations(fake)).toEqual(["Bearer jwt-1"]);
+    expect(authorizations(fake)).toEqual(["Bearer access-token-1"]);
   });
 
   it("does not retry a mint the token endpoint refused", async () => {

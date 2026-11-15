@@ -32,7 +32,7 @@ describe("Static Access tokens", () => {
       learnerReply(),
     );
     const client = new TeachMeHipaa({
-      tokenProvider: staticTokenProvider("jwt-from-elsewhere"),
+      tokenProvider: staticTokenProvider("access-token-from-elsewhere"),
       organizationId: ORG_ID,
       transport: fake.transport,
     });
@@ -43,13 +43,16 @@ describe("Static Access tokens", () => {
     expect(fake.requestsTo(TOKEN_ROUTE)).toHaveLength(0);
     expect(
       fake.requestsTo(LEARNER_ROUTE).map((r) => r.headers.authorization),
-    ).toEqual(["Bearer jwt-from-elsewhere", "Bearer jwt-from-elsewhere"]);
+    ).toEqual([
+      "Bearer access-token-from-elsewhere",
+      "Bearer access-token-from-elsewhere",
+    ]);
   });
 
   it("raises an AuthenticationError on 401 without resending the same token", async () => {
     const fake = createFakeTransport().script(LEARNER_ROUTE, unauthorized);
     const client = new TeachMeHipaa({
-      tokenProvider: staticTokenProvider("jwt-expired"),
+      tokenProvider: staticTokenProvider("access-token-expired"),
       organizationId: ORG_ID,
       transport: fake.transport,
     });
@@ -66,7 +69,7 @@ describe("The tokenProvider option", () => {
     const options = {
       clientId: CLIENT_ID,
       clientSecret: CLIENT_SECRET,
-      tokenProvider: staticTokenProvider("jwt"),
+      tokenProvider: staticTokenProvider("access-token"),
     };
 
     expect(() => new TeachMeHipaa(options as never)).toThrow(TypeError);
@@ -79,7 +82,9 @@ describe("The tokenProvider option", () => {
     expect(
       () =>
         new TeachMeHipaa({
-          tokenProvider: { getAccessToken: () => Promise.resolve("jwt") },
+          tokenProvider: {
+            getAccessToken: () => Promise.resolve("access-token"),
+          },
         } as never),
     ).toThrow(TypeError);
   });
@@ -92,7 +97,7 @@ describe("Partner-level tokens", () => {
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, {
         json: {
-          access_token: "jwt-partner",
+          access_token: "access-token-partner",
           token_type: "Bearer",
           expires_in: 900,
           scope: "partner:orgs:read partner:orgs:write",
@@ -123,7 +128,7 @@ describe("Partner-level tokens", () => {
       APP_BASIC_AUTHORIZATION,
     );
     expect(fake.requestsTo(route)[0]?.headers.authorization).toBe(
-      "Bearer jwt-partner",
+      "Bearer access-token-partner",
     );
   });
 });

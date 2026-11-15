@@ -1,5 +1,6 @@
 import type { QueryParams, Requester, RequestSpec } from "./requester.js";
 import type { WithLastResponse } from "./response.js";
+import { prefixed, usageError } from "./usage.js";
 
 /**
  * How a list asks for its next page, from the IR. `cursor` lists pass the
@@ -84,7 +85,7 @@ const fetchPage = async <T>(
   const getNextPage = (): Promise<Page<T>> => {
     if (body.nextCursor === null) {
       return Promise.reject(
-        new Error("This is the last page; check hasNextPage() first."),
+        new Error(prefixed("this is the last page; check hasNextPage() first")),
       );
     }
     const query: QueryParams = {
@@ -132,7 +133,7 @@ export const requestPage = <T>(
       [Symbol.asyncIterator]: items,
       autoPagingToArray: async ({ limit }: { readonly limit: number }) => {
         if (!Number.isInteger(limit) || limit < 1 || limit > MAX_ARRAY_LIMIT) {
-          throw new TypeError(
+          throw usageError(
             `autoPagingToArray needs a limit from 1 to ${String(MAX_ARRAY_LIMIT)}`,
           );
         }

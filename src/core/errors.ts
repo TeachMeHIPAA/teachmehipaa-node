@@ -21,6 +21,21 @@ export interface TeachMeHipaaErrorDetails {
   readonly cause?: unknown;
 }
 
+/** The details of an error raised without a usable response. */
+export const noResponseDetails = (
+  message: string,
+): TeachMeHipaaErrorDetails => ({
+  message,
+  status: null,
+  code: null,
+  title: null,
+  detail: null,
+  errors: [],
+  requestId: null,
+  headers: {},
+  raw: null,
+});
+
 /**
  * The base of every error the library raises about an API call. Catch a
  * subclass to handle one kind of failure; `name` survives minification.
@@ -178,17 +193,7 @@ export class WebhookSignatureError extends TeachMeHipaaError {
   declare readonly code: WebhookSignatureErrorCode;
 
   constructor(code: WebhookSignatureErrorCode, message: string) {
-    super({
-      message,
-      status: null,
-      code,
-      title: null,
-      detail: null,
-      errors: [],
-      requestId: null,
-      headers: {},
-      raw: null,
-    });
+    super({ ...noResponseDetails(message), code });
   }
 }
 

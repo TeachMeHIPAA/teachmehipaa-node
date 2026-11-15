@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import TeachMeHipaa, { type Clock } from "../src/index.js";
+import { type Clock } from "../src/index.js";
+import { clientOn } from "./support/client.js";
 import { createFakeClock } from "./support/fake-clock.js";
 import {
   createFakeTransport,
@@ -7,8 +8,6 @@ import {
   type ScriptedReply,
 } from "./support/fake-transport.js";
 import {
-  CLIENT_ID,
-  CLIENT_SECRET,
   ORG_ID,
   TOKEN_ROUTE,
   learnerBody,
@@ -17,15 +16,6 @@ import {
 
 const LEARNERS_ROUTE = `GET /v1/organizations/${ORG_ID}/learners`;
 const EVENTS_ROUTE = `GET /v1/organizations/${ORG_ID}/events`;
-
-const clientOn = (fake: FakeTransport, clock: Clock = createFakeClock()) =>
-  new TeachMeHipaa({
-    clientId: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
-    organizationId: ORG_ID,
-    transport: fake.transport,
-    clock,
-  });
 
 const learner = (learnerId: string) => ({ ...learnerBody, learnerId });
 
@@ -261,7 +251,7 @@ describe("Tailing the Event log", () => {
         pageReply([event("evt_05")], null),
       );
 
-    const tail = clientOn(fake, clock).events.tail({
+    const tail = clientOn(fake, { clock }).events.tail({
       after: "evt_02",
       type: "learner.certified",
       limit: 2,
@@ -314,7 +304,7 @@ describe("Tailing the Event log", () => {
         pageReply([event("evt_04"), event("evt_05")], null),
       );
 
-    const tail = clientOn(fake, clock).events.tail({
+    const tail = clientOn(fake, { clock }).events.tail({
       after: "evt_02",
       follow: true,
       signal: controller.signal,
@@ -345,7 +335,7 @@ describe("Tailing the Event log", () => {
         pageReply([event("evt_03")], null),
       );
 
-    const tail = clientOn(fake, clock).events.tail({
+    const tail = clientOn(fake, { clock }).events.tail({
       after: "evt_02",
       follow: true,
       interval: 250,
@@ -375,7 +365,7 @@ describe("Tailing the Event log", () => {
       .script(EVENTS_ROUTE, pageReply([event("evt_03")], null));
 
     const eventIds: string[] = [];
-    for await (const item of clientOn(fake, clock).events.tail({
+    for await (const item of clientOn(fake, { clock }).events.tail({
       after: "evt_02",
       follow: true,
       signal: controller.signal,

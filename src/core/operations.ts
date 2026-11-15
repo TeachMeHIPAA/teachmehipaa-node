@@ -1,9 +1,15 @@
 import type { Operation as OperationModel } from "../models/operation.js";
 import { pause } from "./clock.js";
-import { OperationFailedError, OperationTimeoutError } from "./errors.js";
-import { problemFields } from "./problem.js";
+import {
+  OperationFailedError,
+  OperationTimeoutError,
+  noResponseDetails,
+} from "./errors.js";
+import { isRecord, problemFields } from "./problem.js";
+import { jitteredBackoff } from "./retry.js";
 import type { RequestSpec, Requester } from "./requester.js";
 import type { ResponseMetadata } from "./response.js";
+import { usageError } from "./usage.js";
 
 /** Options for `Operation.wait`. */
 export interface OperationWaitOptions {
@@ -19,8 +25,8 @@ export interface OperationWaitOptions {
  * How a Test delivery or a redrive ended: the `response` of the Operation
  * that `webhookSubscriptions.test` and `webhookSubscriptions.redrive` return.
  * Tell the variants apart by `_tag`. Others may appear, such as when there was
- * nothing to deliver or the delivery could not be queued; handle tags you
- * don't recognize.
+ * nothing to deliver or the delivery could not be queued; they arrive as an
+ * `UnknownWebhookDeliveryResult`, so handle tags you don't recognize.
  */
 export type WebhookDeliveryResult =
   /** The endpoint accepted the Delivery. */
@@ -33,7 +39,18 @@ export type WebhookDeliveryResult =
       readonly responseStatus?: number;
     }
   /** The Delivery had already ended before this Operation; `status` is how. */
-  | { readonly _tag: "settled"; readonly status: string };
+  | { readonly _tag: "settled"; readonly status: string }
+  | UnknownWebhookDeliveryResult;
+
+/**
+ * A delivery result whose `_tag` this version doesn't know yet. Results only
+ * grow (ADR-0006), so it is read as it came, every field kept.
+ */
+export interface UnknownWebhookDeliveryResult {
+  // `Record<never, never>` keeps the known tags in editor completions.
+  readonly _tag: string & Record<never, never>;
+  readonly [field: string]: unknown;
+}
 
 /**
  * The file an export Operation produced: `enrollments.export`,
@@ -79,16 +96,10 @@ const DEFAULT_TIMEOUT_MS = 5 * 60_000;
 const DEFAULT_INTERVAL_MS = 1_000;
 const MAX_INTERVAL_MS = 10_000;
 
-// The ceiling doubles from `interval` up to 10 s, and jitter picks 50–100 % of
-// it so that many waiters don't poll in step. Nothing waits less than
-// `interval`, and a longer `interval` than the cap stays as it is.
-const pollDelay = (interval: number, pollNumber: number): number => {
-  const ceiling = Math.min(
-    interval * 2 ** (pollNumber - 1),
-    Math.max(MAX_INTERVAL_MS, interval),
-  );
-  return Math.max(interval, Math.round(ceiling * (0.5 + Math.random() * 0.5)));
-};
+// Backs off from `interval` up to 10 s; an `interval` longer than the cap
+// stays as it is.
+const pollDelay = (interval: number, pollNumber: number): number =>
+  jitteredBackoff(interval, Math.max(MAX_INTERVAL_MS, interval), pollNumber);
 
 /**
  * The `operationId` in an Operation's `name`, which is
@@ -100,8 +111,8 @@ export const operationIdFromName = (name: string): string => {
     name,
   )?.[1];
   if (operationId === undefined) {
-    throw new TypeError(
-      `TeachMeHipaa: "${name}" is not an Operation name (organizations/{orgId}/operations/{operationId})`,
+    throw usageError(
+      `"${name}" is not an Operation name (organizations/{orgId}/operations/{operationId})`,
     );
   }
   return operationId;
@@ -112,15 +123,11 @@ const timedOut = (
   timeout: number,
 ): OperationTimeoutError =>
   new OperationTimeoutError({
-    message: `Operation ${operation.name} was not done after ${String(timeout)} ms`,
-    status: null,
-    code: null,
-    title: null,
-    detail: null,
-    errors: [],
+    ...noResponseDetails(
+      `Operation ${operation.name} was not done after ${String(timeout)} ms`,
+    ),
     requestId: operation.lastResponse.requestId,
     headers: operation.lastResponse.headers,
-    raw: null,
     operation,
   });
 
@@ -148,16 +155,13 @@ const settled = <TResponse>(
   return operation;
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
 // The spec says only that an export's `response` "holds the CSV file". The
 // API sends it inline as `{format: "csv", contentType, filename, rowCount,
 // dataBase64}` (the monorepo's `ExportArtifact`), the file base64-encoded.
 const exportResultOf = (operation: Operation): ExportResult => {
   if (!operation.done) {
-    throw new TypeError(
-      `TeachMeHipaa: Operation ${operation.name} is not done; call wait() first`,
+    throw usageError(
+      `Operation ${operation.name} is not done; call wait() first`,
     );
   }
   const { response } = settled(operation);
@@ -166,8 +170,8 @@ const exportResultOf = (operation: Operation): ExportResult => {
     response.format !== "csv" ||
     typeof response.dataBase64 !== "string"
   ) {
-    throw new TypeError(
-      `TeachMeHipaa: Operation ${operation.name} did not produce a CSV export`,
+    throw usageError(
+      `Operation ${operation.name} did not produce a CSV export`,
     );
   }
   return {

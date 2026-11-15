@@ -2,8 +2,7 @@
 
 ## Setup
 
-Use the Node version in `.nvmrc` (any Node 20 or newer works; `npm run
-generate` needs 22.18 or newer), then:
+Use the Node version in `.nvmrc` (any Node 20 or newer works), then:
 
 ```sh
 npm ci
@@ -49,10 +48,10 @@ operationId and a type from that file to `OPERATION_RESPONSES` in
 1. Copy `openapi.developer.json`, `sdk-ir.json` and `sdk-ir.schema.json` from
    one IR build into `openapi/`, and its `source.release` into
    `OPENAPI_VERSION`.
-2. Run `npm run generate` (Node 22.18 or newer, which runs TypeScript
-   directly). It validates the IR against its schema, then rewrites
-   `src/models/` and `src/resources/`, deleting files the IR no longer
-   produces.
+2. Run `npm run generate` (it runs the TypeScript generator through `tsx`, a
+   dev dependency, so any supported Node works). It validates the IR against
+   its schema, then rewrites `src/models/` and `src/resources/`, deleting
+   files the IR no longer produces.
 3. Run `npm test`. The generated-surface test fails if the committed output
    differs from what the generator writes, or if any spec operation lacks
    exactly one public method.

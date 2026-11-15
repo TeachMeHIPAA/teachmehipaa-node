@@ -7,6 +7,7 @@ import TeachMeHipaa, {
   type TokenStore,
   type Transport,
 } from "../src/index.js";
+import { flushPendingWork } from "./support/client.js";
 import { createFakeClock, type FakeClock } from "./support/fake-clock.js";
 import {
   createFakeTransport,
@@ -31,8 +32,6 @@ import {
 } from "./support/fixtures.js";
 
 const SECOND = 1000;
-
-const flushPendingWork = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const refreshTokensSent = (fake: FakeTransport): readonly (string | null)[] =>
   fake
@@ -90,7 +89,7 @@ describe("Partner Grants", () => {
   it("saves the rotated Refresh token before the API request is sent", async () => {
     const log: string[] = [];
     const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, grantTokenReply("jwt-org", REFRESH_TOKEN_2))
+      .script(TOKEN_ROUTE, grantTokenReply("access-token-org", REFRESH_TOKEN_2))
       .script(LEARNER_ROUTE, learnerReply());
     const transport = logged(fake.transport, log);
     const tokenStore = createMemoryStore(log);
@@ -118,14 +117,14 @@ describe("Partner Grants", () => {
       { grant_type: "refresh_token", refresh_token: REFRESH_TOKEN_1 },
     );
     expect(fake.requestsTo(LEARNER_ROUTE)[0]?.headers.authorization).toBe(
-      "Bearer jwt-org",
+      "Bearer access-token-org",
     );
   });
 
   it("aborts the call without using the Access token when the store can't save", async () => {
     const fake = createFakeTransport().script(
       TOKEN_ROUTE,
-      grantTokenReply("jwt-org", REFRESH_TOKEN_2),
+      grantTokenReply("access-token-org", REFRESH_TOKEN_2),
     );
     const storeFailure = new Error("database is read-only");
     const client = grantClient(fake, {
@@ -144,8 +143,8 @@ describe("Partner Grants", () => {
     const fake = createFakeTransport()
       .script(
         TOKEN_ROUTE,
-        grantTokenReply("jwt-1", REFRESH_TOKEN_2),
-        grantTokenReply("jwt-2", REFRESH_TOKEN_3),
+        grantTokenReply("access-token-1", REFRESH_TOKEN_2),
+        grantTokenReply("access-token-2", REFRESH_TOKEN_3),
       )
       .script(LEARNER_ROUTE, learnerReply());
     const saves: string[] = [];
@@ -218,7 +217,7 @@ describe("Partner Grants", () => {
       client.learners.retrieve(LEARNER_ID),
     ]);
     await flushPendingWork();
-    releaseToken(grantTokenReply("jwt-org", REFRESH_TOKEN_2));
+    releaseToken(grantTokenReply("access-token-org", REFRESH_TOKEN_2));
     await both;
 
     expect(fake.requestsTo(TOKEN_ROUTE)).toHaveLength(1);
@@ -230,8 +229,8 @@ describe("Partner Grants", () => {
     const fake = createFakeTransport()
       .script(
         TOKEN_ROUTE,
-        grantTokenReply("jwt-1", REFRESH_TOKEN_2, 900),
-        grantTokenReply("jwt-2", REFRESH_TOKEN_3, 900),
+        grantTokenReply("access-token-1", REFRESH_TOKEN_2, 900),
+        grantTokenReply("access-token-2", REFRESH_TOKEN_3, 900),
       )
       .script(LEARNER_ROUTE, learnerReply(), learnerReply(), learnerReply());
     const tokenStore = createMemoryStore([]);
@@ -247,15 +246,19 @@ describe("Partner Grants", () => {
     expect(tokenStore.saved).toEqual([REFRESH_TOKEN_2, REFRESH_TOKEN_3]);
     expect(
       fake.requestsTo(LEARNER_ROUTE).map((r) => r.headers.authorization),
-    ).toEqual(["Bearer jwt-1", "Bearer jwt-1", "Bearer jwt-2"]);
+    ).toEqual([
+      "Bearer access-token-1",
+      "Bearer access-token-1",
+      "Bearer access-token-2",
+    ]);
   });
 
   it("re-mints once and replays when the API answers 401", async () => {
     const fake = createFakeTransport()
       .script(
         TOKEN_ROUTE,
-        grantTokenReply("jwt-1", REFRESH_TOKEN_2),
-        grantTokenReply("jwt-2", REFRESH_TOKEN_3),
+        grantTokenReply("access-token-1", REFRESH_TOKEN_2),
+        grantTokenReply("access-token-2", REFRESH_TOKEN_3),
       )
       .script(
         LEARNER_ROUTE,
@@ -273,12 +276,12 @@ describe("Partner Grants", () => {
     expect(refreshTokensSent(fake)).toEqual([REFRESH_TOKEN_1, REFRESH_TOKEN_2]);
     expect(
       fake.requestsTo(LEARNER_ROUTE).map((r) => r.headers.authorization),
-    ).toEqual(["Bearer jwt-1", "Bearer jwt-2"]);
+    ).toEqual(["Bearer access-token-1", "Bearer access-token-2"]);
   });
 
   it("uses a Refresh token passed up front for the first exchange", async () => {
     const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, grantTokenReply("jwt-org", REFRESH_TOKEN_3))
+      .script(TOKEN_ROUTE, grantTokenReply("access-token-org", REFRESH_TOKEN_3))
       .script(LEARNER_ROUTE, learnerReply());
     const tokenStore = createMemoryStore([], "tmh_rt_never_loaded");
 
@@ -292,7 +295,7 @@ describe("Partner Grants", () => {
 
   it("narrows the Access token to the Scopes it is given", async () => {
     const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, grantTokenReply("jwt-org", REFRESH_TOKEN_2))
+      .script(TOKEN_ROUTE, grantTokenReply("access-token-org", REFRESH_TOKEN_2))
       .script(LEARNER_ROUTE, learnerReply());
 
     await grantClient(fake, createMemoryStore([]), {

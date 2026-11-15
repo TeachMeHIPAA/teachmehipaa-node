@@ -2,6 +2,7 @@ import { WebhookSignatureError } from "./errors.js";
 import type { Event } from "../models/event.js";
 import type { TestDelivery } from "../models/test-delivery.js";
 import type { UnknownEvent } from "../models/unknown-event.js";
+import { prefixed, usageError } from "./usage.js";
 
 /** Request headers as Node, Express, Fetch and most frameworks expose them. */
 export type WebhookHeaders =
@@ -47,7 +48,7 @@ const sha256Hex = async (bytes: Uint8Array<ArrayBuffer>): Promise<string> =>
 // like base64, but the platform never decodes it.
 const hmacKey = (secret: string) => {
   if (!secret) {
-    throw new TypeError(
+    throw usageError(
       "secret must be the Webhook subscription's Signing secret; got an empty value",
     );
   }
@@ -91,7 +92,7 @@ const pathAndQuery = (path: string): string => {
     const url = new URL(path);
     return `${url.pathname}${url.search}`;
   }
-  throw new TypeError(
+  throw usageError(
     `path must be the request path (such as "/webhooks/tmh?x=1") or the full request URL, got "${path}"`,
   );
 };
@@ -127,7 +128,9 @@ const constructEvent = async (
   const signedPath = pathAndQuery(path);
   const tolerance = options.tolerance ?? DEFAULT_TOLERANCE_SECONDS;
   if (!(tolerance > 0)) {
-    throw new RangeError("tolerance must be a positive number of seconds");
+    throw new RangeError(
+      prefixed("tolerance must be a positive number of seconds"),
+    );
   }
   const signature = requiredHeader(headers, "x-tmh-signature");
   const timestamp = requiredHeader(headers, "x-tmh-timestamp");

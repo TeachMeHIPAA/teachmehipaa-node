@@ -1,5 +1,9 @@
 import type { Clock } from "./clock.js";
-import { ConnectionError, type TeachMeHipaaError } from "./errors.js";
+import {
+  ConnectionError,
+  RateLimitError,
+  type TeachMeHipaaError,
+} from "./errors.js";
 import { retryAfterSeconds } from "./problem.js";
 
 const INITIAL_DELAY_MS = 500;
@@ -21,25 +25,36 @@ export interface RetryPolicy {
   ) => number | null;
 }
 
-// Stripe's schedule: the ceiling doubles from 0.5 s to 5 s, jitter picks
-// 50–100 % of it, and nothing waits less than 0.5 s.
-const backoff = (retryNumber: number): number => {
-  const ceiling = Math.min(
-    INITIAL_DELAY_MS * 2 ** (retryNumber - 1),
-    MAX_DELAY_MS,
-  );
-  return Math.max(INITIAL_DELAY_MS, ceiling * (0.5 + Math.random() * 0.5));
+/**
+ * Milliseconds before try `attempt` (from 1) after the first: the ceiling
+ * doubles from `initial` up to `cap`, and jitter picks 50–100 % of it so
+ * that many clients don't retry in step. Nothing waits less than `initial`.
+ */
+export const jitteredBackoff = (
+  initial: number,
+  cap: number,
+  attempt: number,
+): number => {
+  const ceiling = Math.min(initial * 2 ** (attempt - 1), cap);
+  return Math.max(initial, Math.round(ceiling * (0.5 + Math.random() * 0.5)));
 };
 
-/** Honors `Retry-After` up to 60 s, otherwise backs off exponentially. */
+/**
+ * Honors `Retry-After` up to 60 s, otherwise backs off exponentially on
+ * Stripe's schedule, from 0.5 s to 5 s.
+ */
 export const serverDelay = (
   error: TeachMeHipaaError,
   retryNumber: number,
   now: number,
 ): number => {
-  const retryAfter = retryAfterSeconds(error.headers["retry-after"], now);
+  // A 429 already read the header; a 503 may carry one too.
+  const retryAfter =
+    error instanceof RateLimitError
+      ? error.retryAfter
+      : retryAfterSeconds(error.headers["retry-after"], now);
   return retryAfter === null
-    ? backoff(retryNumber)
+    ? jitteredBackoff(INITIAL_DELAY_MS, MAX_DELAY_MS, retryNumber)
     : Math.min(retryAfter * 1000, MAX_RETRY_AFTER_MS);
 };
 

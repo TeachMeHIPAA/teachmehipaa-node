@@ -1,16 +1,13 @@
 import { describe, expect, it } from "vitest";
-import TeachMeHipaa, { ApiError, ConnectionError } from "../src/index.js";
-import { createFakeClock } from "./support/fake-clock.js";
+import { ApiError, ConnectionError } from "../src/index.js";
+import { clientOn } from "./support/client.js";
 import {
   createFakeTransport,
-  type FakeTransport,
   type ScriptStep,
   type ScriptedReply,
   textBody,
 } from "./support/fake-transport.js";
 import {
-  CLIENT_ID,
-  CLIENT_SECRET,
   LEARNER_ID,
   LEARNER_ROUTE,
   ORG_ID,
@@ -46,15 +43,6 @@ const launchLinkReply: ScriptedReply = {
     expiresAt: "2026-11-15T12:05:00.000Z",
   },
 };
-
-const clientOn = (fake: FakeTransport) =>
-  new TeachMeHipaa({
-    clientId: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
-    organizationId: ORG_ID,
-    transport: fake.transport,
-    clock: createFakeClock(),
-  });
 
 describe("Idempotency keys and request bodies", () => {
   it("sends a create as JSON with a generated UUIDv4 Idempotency-Key", async () => {
@@ -151,7 +139,7 @@ describe("Idempotency keys and request bodies", () => {
       .script(UPDATE_ROUTE, failure, learnerReply());
 
     const error: unknown = await clientOn(fake)
-      .learners.update(LEARNER_ID, { name: "Ana Example" })
+      .learners.update(LEARNER_ID, { name: "Ana Example" }, { ifMatch: '"7"' })
       .catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(errorClass);

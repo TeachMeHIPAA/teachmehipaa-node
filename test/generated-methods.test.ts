@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import TeachMeHipaa, { ApiError } from "../src/index.js";
+import { ApiError } from "../src/index.js";
+import { clientOn } from "./support/client.js";
 import {
   createFakeTransport,
   textBody,
@@ -7,11 +8,10 @@ import {
   type ScriptedReply,
 } from "./support/fake-transport.js";
 import {
-  CLIENT_ID,
-  CLIENT_SECRET,
   LEARNER_ID,
   LEARNER_ROUTE,
   ORG_ID,
+  ORG,
   TOKEN_ROUTE,
   learnerBody,
   tokenReply,
@@ -24,8 +24,6 @@ const ENROLLMENT_ID = "enr_01JD8C";
 const SUBSCRIPTION_ID = "whs_01JD8D";
 const PARTNER_ID = "ptn_01JD8E";
 const CERTIFICATE_ID = "cert_01JD8F";
-
-const ORG = `/v1/organizations/${ORG_ID}`;
 
 /** `dev#/components/schemas/EnrollmentDto`. */
 const enrollmentBody = {
@@ -60,17 +58,6 @@ const subscriptionBody = {
 };
 
 const noContent: ScriptedReply = { status: 204 };
-
-const clientOn = (
-  fake: FakeTransport,
-  organizationId: string | null = ORG_ID,
-) =>
-  new TeachMeHipaa({
-    clientId: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
-    ...(organizationId === null ? {} : { organizationId }),
-    transport: fake.transport,
-  });
 
 describe("Generated methods on the wire", () => {
   it("sends a Custom method to its colon path with a generated Idempotency-Key", async () => {
@@ -107,10 +94,9 @@ describe("Generated methods on the wire", () => {
         headers: { "x-request-id": "req_page" },
       });
 
-    const page = await clientOn(fake, null).partners.organizations.list(
-      PARTNER_ID,
-      { limit: 10 },
-    );
+    const page = await clientOn(fake, {
+      organizationId: null,
+    }).partners.organizations.list(PARTNER_ID, { limit: 10 });
 
     expect(page.items).toEqual(items);
     expect(page.nextCursor).toBe("cur_2");
@@ -130,6 +116,7 @@ describe("Generated methods on the wire", () => {
     const subscription = await clientOn(fake).webhookSubscriptions.update(
       SUBSCRIPTION_ID,
       { enabled: false, description: null },
+      { ifMatch: '"3"' },
     );
 
     expect(subscription.enabled).toBe(false);
@@ -158,6 +145,50 @@ describe("Generated methods on the wire", () => {
     const [request] = fake.requestsTo(route);
     expect(request?.body).toBeUndefined();
     expect(request?.headers).not.toHaveProperty("content-type");
+  });
+
+  describe("a delete answered with something other than no content", () => {
+    const route = `DELETE ${ORG}/webhook-subscriptions/${SUBSCRIPTION_ID}`;
+
+    it("raises ApiError for a 200 HTML page, as from a wrong baseUrl", async () => {
+      const fake = createFakeTransport()
+        .script(TOKEN_ROUTE, tokenReply())
+        .script(route, {
+          headers: { "content-type": "text/html; charset=utf-8" },
+          body: "<!doctype html><title>Welcome</title>",
+        });
+
+      const deleting = clientOn(fake).webhookSubscriptions.delete(
+        SUBSCRIPTION_ID,
+        { maxRetries: 0 },
+      );
+
+      await expect(deleting).rejects.toBeInstanceOf(ApiError);
+      await expect(deleting).rejects.toMatchObject({ status: 200 });
+      await expect(deleting).rejects.toThrow(/text\/html/);
+    });
+
+    it("resolves a 200 with an empty body", async () => {
+      const fake = createFakeTransport()
+        .script(TOKEN_ROUTE, tokenReply())
+        .script(route, { status: 200 });
+
+      const deleted =
+        await clientOn(fake).webhookSubscriptions.delete(SUBSCRIPTION_ID);
+
+      expect(deleted.lastResponse.status).toBe(200);
+    });
+
+    it("resolves a 200 with a JSON body", async () => {
+      const fake = createFakeTransport()
+        .script(TOKEN_ROUTE, tokenReply())
+        .script(route, { json: {} });
+
+      const deleted =
+        await clientOn(fake).webhookSubscriptions.delete(SUBSCRIPTION_ID);
+
+      expect(deleted.lastResponse.status).toBe(200);
+    });
   });
 
   describe("Learner write results", () => {

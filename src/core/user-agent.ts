@@ -1,6 +1,6 @@
 import { VERSION } from "../version.js";
 
-/** Identifies your integration to TeachMeHIPAA in the User-Agent. */
+/** Identifies your software to TeachMeHIPAA in the User-Agent. */
 export interface AppInfo {
   readonly name: string;
   readonly version?: string;

@@ -176,6 +176,18 @@ const constrain = (
   };
 };
 
+/** The object type, imported, minus the fields its constraints replace. */
+const constrainedBase = (
+  name: string,
+  constrained: Constrained,
+  imports: Imports,
+): string => {
+  imports.model(name);
+  return constrained.omitted.length === 0
+    ? name
+    : `Omit<${name}, ${constrained.omitted.map(literal).join(" | ")}>`;
+};
+
 const renderConstrained = (
   name: string,
   constrained: Constrained,
@@ -184,11 +196,7 @@ const renderConstrained = (
   if (constrained.empty) {
     return null;
   }
-  imports.model(name);
-  const base =
-    constrained.omitted.length === 0
-      ? name
-      : `Omit<${name}, ${constrained.omitted.map(literal).join(" | ")}>`;
+  const base = constrainedBase(name, constrained, imports);
   return constrained.members.length === 0
     ? base
     : `${base} & { ${constrained.members.join(" ")} }`;
@@ -250,13 +258,59 @@ const requestPath = (method: IrMethod, where: string): string => {
   return customVerb === null ? relative : `${relative}:${customVerb}`;
 };
 
-const methodSource = (
-  context: Context,
-  resource: IrResource,
+/**
+ * What sets a method's call apart from a plain request, which picks both its
+ * options type and the note at the end of its doc comment.
+ */
+type CallStyle =
+  | "ifMatchRequired"
+  | "ifMatchOptional"
+  | "conditionalRead"
+  | "download"
+  | "operation"
+  | "plain";
+
+const CALL_STYLES: Readonly<
+  Record<CallStyle, { readonly options: string; readonly note: string | null }>
+> = {
+  ifMatchRequired: {
+    options: "RequiredConditionalWriteOptions",
+    note: "Pass the object's current ETag as `ifMatch`, such as the object you read: `{ ifMatch: object }`. Without it the API refuses the write with `PreconditionFailedError` (428); with a stale one, the same error (412).",
+  },
+  ifMatchOptional: {
+    options: "ConditionalWriteOptions",
+    note: "Pass `ifMatch` to make the call conditional on the object's ETag; a stale one raises `PreconditionFailedError` (412).",
+  },
+  conditionalRead: {
+    options: "ConditionalReadOptions",
+    note: "Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`.",
+  },
+  download: {
+    options: "DownloadOptions",
+    note: "Resolves with the whole file in `data`, or with `asStream: true`, as a web `ReadableStream` in `stream`.",
+  },
+  operation: {
+    options: "RequestOptions",
+    note: "Resolves with an Operation; `await operation.wait()` for its final state.",
+  },
+  plain: { options: "RequestOptions", note: null },
+};
+
+const callStyle = (method: IrMethod): CallStyle => {
+  if (method.ifMatch === "required") return "ifMatchRequired";
+  if (method.ifMatch === "optional") return "ifMatchOptional";
+  if (method.ifNoneMatch !== "none") return "conditionalRead";
+  if (method.response.kind === "binary") return "download";
+  if (method.response.kind === "operation") return "operation";
+  return "plain";
+};
+
+/** Refuses IR shapes the generated code can't express. */
+const assertSupported = (
   method: IrMethod,
-  imports: Imports,
-): MethodSource => {
-  const where = `${resource.path.join(".")}.${method.name}`;
+  bodyObject: IrObjectType | null,
+  where: string,
+): void => {
   if (method.headerParams.length > 0) {
     throw new Error(`${where}: header parameters aren't supported yet`);
   }
@@ -268,9 +322,6 @@ const methodSource = (
       );
     }
   });
-  const body = method.requestBody;
-  const bodyObject =
-    body === null ? null : context.objectType(body.type, `${where} body`);
   const clash = method.queryParams.find((param) =>
     bodyObject?.fields.some((field) => field.name === param.name),
   );
@@ -279,9 +330,39 @@ const methodSource = (
       `${where}: "${clash.name}" is both a query and a body field`,
     );
   }
+  // The Organization is resolved from the Access token, which a public
+  // method never has.
+  if (method.orgScoped && method.security.kind === "none") {
+    throw new Error(`${where}: an org-scoped method needs bearer security`);
+  }
+  if (method.ifNoneMatch !== "none" && method.response.kind !== "model") {
+    throw new Error(`${where}: If-None-Match needs a model response`);
+  }
+};
 
-  // The params type: query parameters plus the body's fields, minus what the
-  // method fixes itself.
+/**
+ * The params type: query parameters plus the body's fields, minus what the
+ * method fixes itself.
+ */
+interface ParamsShape {
+  readonly typeName: string;
+  /** The method takes a `params` argument at all. */
+  readonly hasParams: boolean;
+  readonly paramsRequired: boolean;
+  /** The exported params type, or `""` without params. */
+  readonly declaration: string;
+  readonly constraints: ConstraintNode;
+}
+
+const paramsShape = (
+  context: Context,
+  resource: IrResource,
+  method: IrMethod,
+  bodyObject: IrObjectType | null,
+  imports: Imports,
+  where: string,
+): ParamsShape => {
+  const body = method.requestBody;
   const typeName = paramsTypeName(resource.path, method.name);
   const queryFields = method.queryParams.map((param) =>
     paramField(param, imports),
@@ -297,33 +378,38 @@ const methodSource = (
     method.queryParams.some((param) => param.required) ||
     (body?.required === true && constrained?.empty === false);
   const paramsDoc = docComment([`Parameters for \`${where}\`.`]);
-  const params = ((): string => {
+  const declaration = ((): string => {
     if (!hasParams) {
       return "";
     }
     if (bodyObject === null || constrained === null || constrained.empty) {
       return `${paramsDoc}export interface ${typeName} {\n${queryFields.join("\n")}\n}\n`;
     }
-    imports.model(bodyObject.name);
-    const base =
-      constrained.omitted.length === 0
-        ? bodyObject.name
-        : `Omit<${bodyObject.name}, ${constrained.omitted.map(literal).join(" | ")}>`;
+    const base = constrainedBase(bodyObject.name, constrained, imports);
     const members = [...queryFields, ...constrained.members];
     return members.length === 0
       ? `${paramsDoc}export type ${typeName} = ${base};\n`
       : `${paramsDoc}export interface ${typeName} extends ${base} {\n${members.join("\n")}\n}\n`;
   })();
+  return { typeName, hasParams, paramsRequired, declaration, constraints };
+};
 
-  const paramsRef = paramsRequired ? "params." : "params?.";
-  const destructure =
-    bodyObject !== null && method.queryParams.length > 0 && hasParams;
+/** The `RequestSpec` literal the method passes to the requester. */
+const requestSpec = (
+  method: IrMethod,
+  params: ParamsShape,
+  destructure: boolean,
+  where: string,
+): string => {
+  const body = method.requestBody;
+  const { response } = method;
+  const paramsRef = params.paramsRequired ? "params." : "params?.";
   const bodyExpression = ((): string | null => {
     if (body === null) {
       return null;
     }
-    const supplied = !hasParams ? null : destructure ? "body" : "params";
-    return withFixedValues(supplied, constraints);
+    const supplied = !params.hasParams ? null : destructure ? "body" : "params";
+    return withFixedValues(supplied, params.constraints);
   })();
   const query =
     method.queryParams.length === 0
@@ -335,47 +421,7 @@ const methodSource = (
               : `${param.name}: ${paramsRef}${param.name}`,
           )
           .join(", ")} }`;
-
-  // The Organization is resolved from the Access token, which a public
-  // method never has.
-  if (method.orgScoped && method.security.kind === "none") {
-    throw new Error(`${where}: an org-scoped method needs bearer security`);
-  }
-  const response = method.response;
-  const conditionalWrite = method.ifMatch !== "none";
-  const conditionalRead = method.ifNoneMatch !== "none";
-  if (conditionalRead && response.kind !== "model") {
-    throw new Error(`${where}: If-None-Match needs a model response`);
-  }
-  const requestOptions = imports.core(
-    "request-options",
-    conditionalWrite
-      ? "ConditionalWriteOptions"
-      : conditionalRead
-        ? "ConditionalReadOptions"
-        : response.kind === "binary"
-          ? "DownloadOptions"
-          : "RequestOptions",
-  );
-  /** The parameter list, with `options` required or optional. */
-  const signatureWith = (options: string, optionsRequired = false): string =>
-    [
-      ...method.pathParams.map(
-        (param) => `${param.name}: ${renderType(param.type, imports)}`,
-      ),
-      ...(hasParams
-        ? [
-            paramsRequired
-              ? `params: ${typeName}`
-              : optionsRequired
-                ? `params: ${typeName} | undefined`
-                : `params?: ${typeName}`,
-          ]
-        : []),
-      `options${optionsRequired ? "" : "?"}: ${options}`,
-    ].join(", ");
-
-  const spec = [
+  return [
     `method: ${literal(method.httpMethod)}`,
     `path: ${literal(requestPath(method, where))}`,
     ...(method.pathParams.length === 0
@@ -402,8 +448,14 @@ const methodSource = (
     ...(body === null || body.binaryParts.length === 0
       ? []
       : [`binaryParts: ${JSON.stringify(body.binaryParts)}`]),
-    ...(conditionalWrite ? ["ifMatch: options?.ifMatch"] : []),
-    ...(conditionalRead ? ["ifNoneMatch: options?.ifNoneMatch"] : []),
+    ...(method.ifMatch === "none"
+      ? []
+      : [
+          `ifMatch: options${method.ifMatch === "required" ? "" : "?"}.ifMatch`,
+        ]),
+    ...(method.ifNoneMatch === "none"
+      ? []
+      : ["ifNoneMatch: options?.ifNoneMatch"]),
     ...(response.kind === "writeResult" || response.kind === "empty"
       ? [`response: { kind: ${literal(response.kind)} }`]
       : response.kind === "binary"
@@ -413,105 +465,159 @@ const methodSource = (
         : []),
     "options",
   ].join(",\n");
+};
 
+/** How the method calls the requester, and what it promises to return. */
+interface ResponseShape {
+  readonly returnType: string;
+  /** The call up to its spec argument, e.g. `this.#requester.request<T>(`. */
+  readonly call: string;
+  /** Arguments after the spec. */
+  readonly trailing?: string;
+  /** Public signatures that narrow the return type by the options. */
+  readonly overloads?: readonly string[];
+}
+
+const responseShape = (
+  method: IrMethod,
+  requestOptions: string,
+  signatureWith: (options: string, optionsRequired?: boolean) => string,
+  imports: Imports,
+  where: string,
+): ResponseShape => {
+  const { response } = method;
   const withLastResponse = (type: string) =>
     `Promise<${imports.core("response", "WithLastResponse")}<${type}>>`;
-  const { returnType, call, trailing, overloads } = ((): {
-    returnType: string;
-    call: string;
-    trailing?: string;
-    /** Public signatures that narrow the return type by the options. */
-    overloads?: readonly string[];
-  } => {
-    switch (response.kind) {
-      case "page": {
-        if (method.pagination === null) {
-          throw new Error(`${where}: a page response needs pagination`);
-        }
-        const { style, cursorParam, itemType } = method.pagination;
-        const item = renderType(itemType, imports);
-        return {
-          returnType: `${imports.core("pagination", "PagePromise")}<${item}>`,
-          call: `${imports.coreValue("pagination", "requestPage")}<${item}>(this.#requester, `,
-          trailing: `, { style: ${literal(style)}, cursorParam: ${literal(cursorParam)} }`,
-        };
+  switch (response.kind) {
+    case "page": {
+      if (method.pagination === null) {
+        throw new Error(`${where}: a page response needs pagination`);
       }
-      case "empty":
-        return {
-          returnType: `Promise<${imports.core("response", "EmptyResponse")}>`,
-          call: "this.#requester.request<object>(",
-        };
-      case "binary": {
-        const bytes = imports.core("response", "BinaryResponse");
-        const stream = imports.core("response", "BinaryStreamResponse");
-        const either = withLastResponse(`${bytes} | ${stream}`);
+      const { style, cursorParam, itemType } = method.pagination;
+      const item = renderType(itemType, imports);
+      return {
+        returnType: `${imports.core("pagination", "PagePromise")}<${item}>`,
+        call: `${imports.coreValue("pagination", "requestPage")}<${item}>(this.#requester, `,
+        trailing: `, { style: ${literal(style)}, cursorParam: ${literal(cursorParam)} }`,
+      };
+    }
+    case "empty":
+      return {
+        returnType: `Promise<${imports.core("response", "EmptyResponse")}>`,
+        call: "this.#requester.request<object>(",
+      };
+    case "binary": {
+      const bytes = imports.core("response", "BinaryResponse");
+      const stream = imports.core("response", "BinaryStreamResponse");
+      const either = withLastResponse(`${bytes} | ${stream}`);
+      return {
+        returnType: either,
+        call: `this.#requester.request<${bytes} | ${stream}>(`,
+        overloads: [
+          `${method.name}(${signatureWith(`${requestOptions} & { readonly asStream: true }`, true)}): ${withLastResponse(stream)};`,
+          `${method.name}(${signatureWith(`${requestOptions} & { readonly asStream?: false }`)}): ${withLastResponse(bytes)};`,
+          `${method.name}(${signatureWith(requestOptions)}): ${either};`,
+        ],
+      };
+    }
+    case "operation": {
+      // `src/core/operations.ts` builds on the Operation model by name.
+      if (response.type.name !== "Operation") {
+        throw new Error(`${where}: an operation response must be Operation`);
+      }
+      const result = OPERATION_RESPONSES[method.operationId];
+      const type = `${imports.core("operations", "Operation")}${result === undefined ? "" : `<${imports.core("operations", result)}>`}`;
+      return {
+        returnType: `Promise<${type}>`,
+        call: `${imports.coreValue("operations", "requestOperation")}${result === undefined ? "" : `<${result}>`}(this.#requester, `,
+      };
+    }
+    case "model":
+    case "writeResult": {
+      const type = renderType(response.type, imports);
+      if (method.ifNoneMatch !== "none") {
+        const notModified = imports.core("response", "NotModified");
+        const either = `Promise<${imports.core("response", "WithLastResponse")}<${type}> | ${notModified}>`;
+        const etag = imports.core("request-options", "ETagSource");
+        const plain = imports.core("request-options", "RequestOptions");
         return {
           returnType: either,
-          call: `this.#requester.request<${bytes} | ${stream}>(`,
+          call: `this.#requester.request<${type} | ${notModified}>(`,
           overloads: [
-            `${method.name}(${signatureWith(`${requestOptions} & { readonly asStream: true }`, true)}): ${withLastResponse(stream)};`,
-            `${method.name}(${signatureWith(`${requestOptions} & { readonly asStream?: false }`)}): ${withLastResponse(bytes)};`,
+            `${method.name}(${signatureWith(`${requestOptions} & { readonly ifNoneMatch: ${etag} }`, true)}): ${either};`,
+            `${method.name}(${signatureWith(`${plain} & { readonly ifNoneMatch?: never }`)}): ${withLastResponse(type)};`,
             `${method.name}(${signatureWith(requestOptions)}): ${either};`,
           ],
         };
       }
-      case "operation": {
-        // `src/core/operations.ts` builds on the Operation model by name.
-        if (response.type.name !== "Operation") {
-          throw new Error(`${where}: an operation response must be Operation`);
-        }
-        const result = OPERATION_RESPONSES[method.operationId];
-        const type = `${imports.core("operations", "Operation")}${result === undefined ? "" : `<${imports.core("operations", result)}>`}`;
-        return {
-          returnType: `Promise<${type}>`,
-          call: `${imports.coreValue("operations", "requestOperation")}${result === undefined ? "" : `<${result}>`}(this.#requester, `,
-        };
-      }
-      case "model":
-      case "writeResult": {
-        const type = renderType(response.type, imports);
-        if (conditionalRead) {
-          const notModified = imports.core("response", "NotModified");
-          const either = `Promise<${imports.core("response", "WithLastResponse")}<${type}> | ${notModified}>`;
-          const etag = imports.core("request-options", "ETagSource");
-          const plain = imports.core("request-options", "RequestOptions");
-          return {
-            returnType: either,
-            call: `this.#requester.request<${type} | ${notModified}>(`,
-            overloads: [
-              `${method.name}(${signatureWith(`${requestOptions} & { readonly ifNoneMatch: ${etag} }`, true)}): ${either};`,
-              `${method.name}(${signatureWith(`${plain} & { readonly ifNoneMatch?: never }`)}): ${withLastResponse(type)};`,
-              `${method.name}(${signatureWith(requestOptions)}): ${either};`,
-            ],
-          };
-        }
-        return {
-          returnType: withLastResponse(type),
-          call: `this.#requester.request<${type}>(`,
-        };
-      }
+      return {
+        returnType: withLastResponse(type),
+        call: `this.#requester.request<${type}>(`,
+      };
     }
-  })();
+  }
+};
 
+const methodSource = (
+  context: Context,
+  resource: IrResource,
+  method: IrMethod,
+  imports: Imports,
+): MethodSource => {
+  const where = `${resource.path.join(".")}.${method.name}`;
+  const body = method.requestBody;
+  const bodyObject =
+    body === null ? null : context.objectType(body.type, `${where} body`);
+  assertSupported(method, bodyObject, where);
+  const params = paramsShape(
+    context,
+    resource,
+    method,
+    bodyObject,
+    imports,
+    where,
+  );
+  const { typeName, hasParams, paramsRequired } = params;
+  const destructure =
+    bodyObject !== null && method.queryParams.length > 0 && hasParams;
+
+  const style = CALL_STYLES[callStyle(method)];
+  const requestOptions = imports.core("request-options", style.options);
+  // The API answers 428 without If-Match, so the type demands it.
+  const optionsRequired = method.ifMatch === "required";
+  /** The parameter list, with `options` required or optional. */
+  const signatureWith = (options: string, required = false): string =>
+    [
+      ...method.pathParams.map(
+        (param) => `${param.name}: ${renderType(param.type, imports)}`,
+      ),
+      ...(hasParams
+        ? [
+            paramsRequired
+              ? `params: ${typeName}`
+              : required
+                ? `params: ${typeName} | undefined`
+                : `params?: ${typeName}`,
+          ]
+        : []),
+      `options${required ? "" : "?"}: ${options}`,
+    ].join(", ");
+
+  const spec = requestSpec(method, params, destructure, where);
+  const { returnType, call, trailing, overloads } = responseShape(
+    method,
+    requestOptions,
+    signatureWith,
+    imports,
+    where,
+  );
   const destructuring = destructure
     ? `const { ${method.queryParams.map((param) => param.name).join(", ")}, ...body }${paramsRequired ? " = params" : `: ${typeName} = params ?? {}`};\n`
     : "";
-  const conditionNote =
-    method.ifMatch === "required"
-      ? "Pass the object's current ETag as `ifMatch`, such as the object you read: `{ ifMatch: object }`. Without it the API refuses the write with `PreconditionFailedError` (428); with a stale one, the same error (412)."
-      : method.ifMatch === "optional"
-        ? "Pass `ifMatch` to make the call conditional on the object's ETag; a stale one raises `PreconditionFailedError` (412)."
-        : response.kind === "binary"
-          ? "Resolves with the whole file in `data`, or with `asStream: true`, as a web `ReadableStream` in `stream`."
-          : response.kind === "operation"
-            ? "Resolves with an Operation; `await operation.wait()` for its final state."
-            : conditionalRead
-              ? "Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`."
-              : null;
-  const doc = docComment([method.summary, method.description, conditionNote]);
-  const source = `${(overloads ?? []).map((overload) => `${doc}${overload}\n`).join("")}${overloads === undefined ? doc : ""}${method.name}(${signatureWith(requestOptions)}): ${returnType} {\n${destructuring}return ${call}{\n${spec}\n}${trailing ?? ""});\n}\n`;
+  const doc = docComment([method.summary, method.description, style.note]);
+  const source = `${(overloads ?? []).map((overload) => `${doc}${overload}\n`).join("")}${overloads === undefined ? doc : ""}${method.name}(${signatureWith(requestOptions, optionsRequired)}): ${returnType} {\n${destructuring}return ${call}{\n${spec}\n}${trailing ?? ""});\n}\n`;
   return {
-    params,
+    params: params.declaration,
     method: source,
     exports: hasParams ? [typeName] : [],
   };
@@ -561,6 +667,31 @@ const resourceTree = (
 const flatten = (nodes: readonly ResourceNode[]): readonly ResourceNode[] =>
   nodes.flatMap((node) => [node, ...flatten(node.children)]);
 
+/** The resources under a class, each a property built from its requester. */
+const childResources = (
+  paths: readonly (readonly string[])[],
+): {
+  readonly imports: readonly string[];
+  readonly fields: readonly string[];
+  readonly assignments: readonly string[];
+} => {
+  const children = paths.map((path) => ({
+    property: path.at(-1) ?? "",
+    ...exposedClass(path),
+  }));
+  return {
+    imports: children.map(
+      (child) => `import { ${child.className} } from "${child.specifier}";`,
+    ),
+    fields: children.map(
+      (child) => `readonly ${child.property}: ${child.className};`,
+    ),
+    assignments: children.map(
+      (child) => `this.${child.property} = new ${child.className}(requester);`,
+    ),
+  };
+};
+
 const resourceSource = (
   context: Context,
   node: ResourceNode,
@@ -572,28 +703,18 @@ const resourceSource = (
     methodSource(context, resource, method, imports),
   );
   const requester = imports.core("requester", "Requester");
-  const children = node.children.map((child) => ({
-    property: child.path.at(-1) ?? "",
-    ...exposedClass(child.path),
-  }));
+  const children = childResources(node.children.map((child) => child.path));
   const fields = [
     ...(methods.length === 0 ? [] : [`readonly #requester: ${requester};`]),
-    ...children.map(
-      (child) => `readonly ${child.property}: ${child.className};`,
-    ),
+    ...children.fields,
   ];
   const assignments = [
     ...(methods.length === 0 ? [] : ["this.#requester = requester;"]),
-    ...children.map(
-      (child) => `this.${child.property} = new ${child.className}(requester);`,
-    ),
+    ...children.assignments,
   ];
-  const childImports = children.map(
-    (child) => `import { ${child.className} } from "${child.specifier}";`,
-  );
   const importLines = [
     imports.render((name) => `../models/${modelFileName(name)}.js`, "../core"),
-    ...childImports,
+    ...children.imports,
   ].join("\n");
   const classDoc = isExtended(node.path)
     ? docComment([
@@ -610,23 +731,17 @@ const resourceSource = (
 };
 
 const apiResourcesSource = (roots: readonly ResourceNode[]): string => {
-  const entries = roots.map((root) => ({
-    property: root.path[0] ?? "",
-    ...exposedClass(root.path),
-  }));
-  const imports = entries
-    .map((entry) => `import { ${entry.className} } from "${entry.specifier}";`)
-    .join("\n");
+  const children = childResources(roots.map((root) => root.path));
   return `${BANNER}
 import type { Requester } from "../core/requester.js";
-${imports}
+${children.imports.join("\n")}
 
 /** Every API resource, as properties of the client. */
 export class ApiResources {
-${entries.map((entry) => `readonly ${entry.property}: ${entry.className};`).join("\n")}
+${children.fields.join("\n")}
 
 constructor(requester: Requester) {
-${entries.map((entry) => `this.${entry.property} = new ${entry.className}(requester);`).join("\n")}
+${children.assignments.join("\n")}
 }
 }
 `;

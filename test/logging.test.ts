@@ -24,7 +24,7 @@ describe("Logging", () => {
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, () => {
         clock.advance(40);
-        return tokenReply("jwt-secret-value");
+        return tokenReply("access-token-secret-value");
       })
       .script(LEARNER_ROUTE, () => {
         clock.advance(120);
@@ -66,7 +66,7 @@ describe("Logging", () => {
     const logged = JSON.stringify(entries);
     [
       CLIENT_SECRET,
-      "jwt-secret-value",
+      "access-token-secret-value",
       learnerBody.email,
       "hipaa-2026",
     ].forEach((secret) => {

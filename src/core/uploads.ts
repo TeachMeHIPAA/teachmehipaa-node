@@ -1,3 +1,5 @@
+import { usageError } from "./usage.js";
+
 /**
  * File content for a multipart part, such as an Enrollment import's CSV: a
  * file path (read with `node:fs`, so Node, Bun or Deno), bytes, a `Blob`, a
@@ -25,8 +27,8 @@ const isAsyncIterable = (
 const readPath = async (path: string, name: string): Promise<Uint8Array> => {
   // A path never holds a line break; CSV text always does.
   if (/[\r\n]/.test(path)) {
-    throw new TypeError(
-      `TeachMeHipaa: ${name} was given text, but a string is a file path. Pass the content as a Blob or Uint8Array.`,
+    throw usageError(
+      `${name} was given text, but a string is a file path. Pass the content as a Blob or Uint8Array.`,
     );
   }
   // Imported on first use, so runtimes without node:fs can still load the
@@ -70,8 +72,8 @@ const readUploadable = async (
   if (isAsyncIterable(value)) {
     return readIterable(value);
   }
-  throw new TypeError(
-    `TeachMeHipaa: ${name} must be a file path, Uint8Array, ArrayBuffer, Blob or stream`,
+  throw usageError(
+    `${name} must be a file path, Uint8Array, ArrayBuffer, Blob or stream`,
   );
 };
 

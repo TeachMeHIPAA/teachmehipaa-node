@@ -16,6 +16,9 @@ import TeachMeHipaa, {
   TeachMeHipaaError,
   TimeoutError,
   WebhookSignatureError,
+  operationIdFromName,
+  partnerGrantTokenProvider,
+  staticTokenProvider,
 } from "../src/index.js";
 import {
   createFakeTransport,
@@ -37,7 +40,11 @@ const REQUEST_ID = "req-404-abc";
 // step is scripted twice because a 401 re-mints and replays once.
 const retrieveFailingWith = async (step: ScriptStep): Promise<unknown> => {
   const fake = createFakeTransport()
-    .script(TOKEN_ROUTE, tokenReply("jwt-1"), tokenReply("jwt-2"))
+    .script(
+      TOKEN_ROUTE,
+      tokenReply("access-token-1"),
+      tokenReply("access-token-2"),
+    )
     .script(LEARNER_ROUTE, step, step);
   const client = new TeachMeHipaa({
     clientId: CLIENT_ID,
@@ -297,5 +304,47 @@ describe("Errors", () => {
       OperationTimeoutError,
       WebhookSignatureError,
     });
+  });
+});
+
+describe("Usage errors", () => {
+  const partnerGrantWithoutStore = () =>
+    partnerGrantTokenProvider({
+      clientId: "app_x",
+      clientSecret: "tmh_as_x",
+    } as never);
+
+  it.each<[string, () => unknown]>([
+    ["the client constructor", () => new TeachMeHipaa({} as never)],
+    ["partnerGrantTokenProvider", partnerGrantWithoutStore],
+    ["staticTokenProvider", () => staticTokenProvider("")],
+    [
+      "oauth.authorizeUrl",
+      () =>
+        TeachMeHipaa.oauth.authorizeUrl({
+          clientId: "",
+          redirectUri: "https://partner.example/callback",
+          scopes: [],
+          state: "s",
+          codeChallenge: "c",
+        }),
+    ],
+    ["operationIdFromName", () => operationIdFromName("operations/x")],
+  ])(
+    "raises a mistake in calling %s as a TypeError prefixed teachmehipaa:",
+    (_, call) => {
+      expect(call).toThrow(TypeError);
+      expect(call).toThrow(/^teachmehipaa: /);
+    },
+  );
+
+  it("prefixes a webhook signing call made with an empty secret", async () => {
+    const signing = TeachMeHipaa.webhooks.generateTestHeaders({
+      payload: "{}",
+      secret: "",
+      path: "/webhooks/tmh",
+    });
+
+    await expect(signing).rejects.toThrow(/^teachmehipaa: secret/);
   });
 });

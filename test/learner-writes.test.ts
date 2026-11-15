@@ -1,32 +1,17 @@
 import { describe, expect, it } from "vitest";
-import TeachMeHipaa from "../src/index.js";
+import { clientOn } from "./support/client.js";
+import { createFakeTransport, textBody } from "./support/fake-transport.js";
 import {
-  createFakeTransport,
-  textBody,
-  type FakeTransport,
-} from "./support/fake-transport.js";
-import {
-  CLIENT_ID,
-  CLIENT_SECRET,
   LEARNER_ID,
-  ORG_ID,
+  ORG,
   TOKEN_ROUTE,
   learnerBody,
   learnerReply,
   tokenReply,
 } from "./support/fixtures.js";
 
-const ORG = `/v1/organizations/${ORG_ID}`;
 const UPDATE_ROUTE = `PATCH ${ORG}/learners/${LEARNER_ID}`;
 const ETAG = '"9f86d081"';
-
-const clientOn = (fake: FakeTransport) =>
-  new TeachMeHipaa({
-    clientId: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
-    organizationId: ORG_ID,
-    transport: fake.transport,
-  });
 
 describe("Learner update as a merge patch", () => {
   it("leaves undefined fields out and sends an explicit null to clear one", async () => {

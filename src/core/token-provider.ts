@@ -7,6 +7,7 @@ import {
 } from "./problem.js";
 import { serverDelay, withRetries, type Attempt } from "./retry.js";
 import type { Transport } from "./transport.js";
+import { usageError } from "./usage.js";
 
 /**
  * Supplies the Access token for each request. Client credentials is the
@@ -194,9 +195,7 @@ export const clientCredentialsTokenProvider = (
  */
 export const staticTokenProvider = (accessToken: string): TokenProvider => {
   if (typeof accessToken !== "string" || accessToken.trim() === "") {
-    throw new TypeError(
-      "TeachMeHipaa: staticTokenProvider needs a non-empty Access token",
-    );
+    throw usageError("staticTokenProvider needs a non-empty Access token");
   }
   return {
     getAccessToken: () => Promise.resolve(accessToken),

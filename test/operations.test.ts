@@ -1,25 +1,17 @@
 import { describe, expect, it } from "vitest";
-import TeachMeHipaa, {
+import {
   type Clock,
   OperationFailedError,
   OperationTimeoutError,
   TeachMeHipaaError,
+  type WebhookDeliveryResult,
   operationIdFromName,
 } from "../src/index.js";
+import { clientOn } from "./support/client.js";
 import { createFakeClock } from "./support/fake-clock.js";
-import {
-  createFakeTransport,
-  type FakeTransport,
-} from "./support/fake-transport.js";
-import {
-  CLIENT_ID,
-  CLIENT_SECRET,
-  ORG_ID,
-  TOKEN_ROUTE,
-  tokenReply,
-} from "./support/fixtures.js";
+import { createFakeTransport } from "./support/fake-transport.js";
+import { ORG_ID, ORG, TOKEN_ROUTE, tokenReply } from "./support/fixtures.js";
 
-const ORG = `/v1/organizations/${ORG_ID}`;
 const OPERATION_ID = "0b7d4a8e-5c1f-4e2a-9d3b-6f8a1c2e4b7d";
 /** Research `api-sdk-surface.md` §8: `organizations/{orgId}/operations/{operationId}`. */
 const OPERATION_NAME = `organizations/${ORG_ID}/operations/${OPERATION_ID}`;
@@ -71,16 +63,6 @@ const exportOperationBody = {
 const EXPORTED_CSV =
   'learnerId,email,name\r\nsub_01JD80AB2C3D4E5F6G7H8J9K0M,ana@example.com,"Example, Ana"\r\nsub_01JD80AB2C3D4E5F6G7H8J9K0N,jose@example.com,José Núñez\r\n';
 
-const clientOn = (fake: FakeTransport, clock: Clock = createFakeClock()) =>
-  new TeachMeHipaa({
-    clientId: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
-    organizationId: ORG_ID,
-    transport: fake.transport,
-    clock,
-    maxRetries: 0,
-  });
-
 describe("Operation.wait", () => {
   it("returns a done Operation without sending a request", async () => {
     const fake = createFakeTransport()
@@ -91,7 +73,7 @@ describe("Operation.wait", () => {
       });
     const clock = createFakeClock();
 
-    const operation = await clientOn(fake, clock).enrollments.export({
+    const operation = await clientOn(fake, { clock }).enrollments.export({
       format: "csv",
     });
     const finished = await operation.wait();
@@ -114,7 +96,7 @@ describe("Operation.wait", () => {
       );
     const clock = createFakeClock();
 
-    const operation = await clientOn(fake, clock).webhookSubscriptions.test(
+    const operation = await clientOn(fake, { clock }).webhookSubscriptions.test(
       SUBSCRIPTION_ID,
     );
     const finished = await operation.wait();
@@ -125,6 +107,41 @@ describe("Operation.wait", () => {
     expect(finished.response?._tag).toBe("sent");
     expect(fake.requestsTo(POLL_ROUTE)).toHaveLength(3);
     expect(clock.sleeps).toHaveLength(3);
+  });
+
+  it("resolves a delivery result whose _tag this version doesn't know", async () => {
+    const skippedBody = {
+      name: OPERATION_NAME,
+      done: true,
+      response: { _tag: "skipped", reason: "nothing to deliver" },
+    };
+    const fake = createFakeTransport()
+      .script(TOKEN_ROUTE, tokenReply())
+      .script(TEST_DELIVERY_ROUTE, { status: 202, json: skippedBody });
+    // ADR-0006: a handler must be able to fall through to unknown tags.
+    const outcomeOf = (result: WebhookDeliveryResult | undefined): string => {
+      if (result === undefined) {
+        return "pending";
+      }
+      switch (result._tag) {
+        case "sent":
+        case "failed":
+        case "settled":
+          return "known";
+        default:
+          return `unrecognized ${result._tag}`;
+      }
+    };
+
+    const operation =
+      await clientOn(fake).webhookSubscriptions.test(SUBSCRIPTION_ID);
+    const finished = await operation.wait();
+
+    expect(outcomeOf(finished.response)).toBe("unrecognized skipped");
+    expect(finished.response).toEqual({
+      _tag: "skipped",
+      reason: "nothing to deliver",
+    });
   });
 
   it("doubles the poll interval from 1 s with jitter up to a 10 s cap", async () => {
@@ -138,7 +155,7 @@ describe("Operation.wait", () => {
       );
     const clock = createFakeClock();
 
-    const operation = await clientOn(fake, clock).webhookSubscriptions.test(
+    const operation = await clientOn(fake, { clock }).webhookSubscriptions.test(
       SUBSCRIPTION_ID,
     );
     await operation.wait();
@@ -170,7 +187,7 @@ describe("Operation.wait", () => {
       .script(POLL_ROUTE, { json: pendingBody }, { json: sentBody });
     const clock = createFakeClock();
 
-    const operation = await clientOn(fake, clock).webhookSubscriptions.test(
+    const operation = await clientOn(fake, { clock }).webhookSubscriptions.test(
       SUBSCRIPTION_ID,
     );
     await operation.wait({ interval: 250 });
@@ -189,7 +206,7 @@ describe("Operation.wait", () => {
         ...Array.from({ length: 10 }, () => ({ json: pendingBody })),
       );
     const clock = createFakeClock();
-    const operation = await clientOn(fake, clock).webhookSubscriptions.test(
+    const operation = await clientOn(fake, { clock }).webhookSubscriptions.test(
       SUBSCRIPTION_ID,
     );
 
@@ -263,10 +280,9 @@ describe("Operation.wait", () => {
         return new Promise(() => undefined);
       },
     };
-    const operation = await clientOn(
-      fake,
-      neverWakes,
-    ).webhookSubscriptions.test(SUBSCRIPTION_ID);
+    const operation = await clientOn(fake, {
+      clock: neverWakes,
+    }).webhookSubscriptions.test(SUBSCRIPTION_ID);
     const controller = new AbortController();
     const shutdown = new Error("worker shutting down");
 
@@ -289,7 +305,7 @@ describe("Operation.wait", () => {
         return { json: pendingBody };
       });
     const clock = createFakeClock();
-    const operation = await clientOn(fake, clock).webhookSubscriptions.test(
+    const operation = await clientOn(fake, { clock }).webhookSubscriptions.test(
       SUBSCRIPTION_ID,
     );
 
@@ -307,7 +323,7 @@ describe("Operation.wait", () => {
       .script(TOKEN_ROUTE, tokenReply())
       .script(TEST_DELIVERY_ROUTE, { status: 202, json: pendingBody });
     const clock = createFakeClock();
-    const operation = await clientOn(fake, clock).webhookSubscriptions.test(
+    const operation = await clientOn(fake, { clock }).webhookSubscriptions.test(
       SUBSCRIPTION_ID,
     );
 
@@ -381,7 +397,7 @@ describe("Operation.exportResult", () => {
 
     expect(() => operation.exportResult()).toThrow(
       new TypeError(
-        `TeachMeHipaa: Operation ${OPERATION_NAME} is not done; call wait() first`,
+        `teachmehipaa: Operation ${OPERATION_NAME} is not done; call wait() first`,
       ),
     );
   });
@@ -395,7 +411,7 @@ describe("Operation.exportResult", () => {
 
     expect(() => operation.exportResult()).toThrow(
       new TypeError(
-        `TeachMeHipaa: Operation ${OPERATION_NAME} did not produce a CSV export`,
+        `teachmehipaa: Operation ${OPERATION_NAME} did not produce a CSV export`,
       ),
     );
   });

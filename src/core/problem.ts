@@ -11,6 +11,7 @@ import {
   PreconditionFailedError,
   RateLimitError,
   TimeoutError,
+  noResponseDetails,
   type FieldError,
   type TeachMeHipaaError,
   type TeachMeHipaaErrorDetails,
@@ -21,7 +22,7 @@ const isJsonContentType = (contentType: string | null): boolean =>
   contentType !== null &&
   /^application\/([\w.+-]*\+)?json\b/i.test(contentType);
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 const stringOrNull = (value: unknown): string | null =>
@@ -198,19 +199,13 @@ export const connectionError = (
   timeout: number,
 ): TeachMeHipaaError => {
   const details: TeachMeHipaaErrorDetails = {
-    message: isTimeout(cause)
-      ? `TeachMeHIPAA API did not respond within ${String(timeout)} ms`
-      : `Could not reach the TeachMeHIPAA API: ${
-          cause instanceof Error ? cause.message : String(cause)
-        }`,
-    status: null,
-    code: null,
-    title: null,
-    detail: null,
-    errors: [],
-    requestId: null,
-    headers: {},
-    raw: null,
+    ...noResponseDetails(
+      isTimeout(cause)
+        ? `TeachMeHIPAA API did not respond within ${String(timeout)} ms`
+        : `Could not reach the TeachMeHIPAA API: ${
+            cause instanceof Error ? cause.message : String(cause)
+          }`,
+    ),
     cause,
   };
   return isTimeout(cause)

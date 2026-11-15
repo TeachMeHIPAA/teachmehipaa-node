@@ -7,9 +7,9 @@ import {
 import { requestPage, type PagePromise } from "../core/pagination.js";
 import type {
   ConditionalReadOptions,
-  ConditionalWriteOptions,
   ETagSource,
   RequestOptions,
+  RequiredConditionalWriteOptions,
 } from "../core/request-options.js";
 import type { Requester } from "../core/requester.js";
 import type {
@@ -217,7 +217,7 @@ export class WebhookSubscriptions {
   update(
     subscriptionId: string,
     params: WebhookSubscriptionUpdateParams,
-    options?: ConditionalWriteOptions,
+    options: RequiredConditionalWriteOptions,
   ): Promise<WithLastResponse<WebhookSubscription>> {
     return this.#requester.request<WebhookSubscription>({
       method: "PATCH",
@@ -229,7 +229,7 @@ export class WebhookSubscriptions {
       idempotencyKey: "none",
       body: params,
       contentType: "application/merge-patch+json",
-      ifMatch: options?.ifMatch,
+      ifMatch: options.ifMatch,
       options,
     });
   }

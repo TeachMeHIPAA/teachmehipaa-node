@@ -25,6 +25,7 @@ import {
   LEARNER_ID,
   LEARNER_ROUTE,
   ORG_ID,
+  ORG,
   REFRESH_TOKEN_1,
   REFRESH_TOKEN_2,
   TOKEN_ROUTE,
@@ -37,7 +38,6 @@ import {
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const README = readFileSync(`${ROOT}README.md`, "utf8");
-const ORG = `/v1/organizations/${ORG_ID}`;
 const WEBHOOK_SECRET = "readme-test-signing-secret";
 
 interface Sample {
@@ -490,7 +490,10 @@ describe("README samples, run against a fake transport", () => {
       },
     });
     const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, grantTokenReply("jwt-grant", REFRESH_TOKEN_2))
+      .script(
+        TOKEN_ROUTE,
+        grantTokenReply("access-token-grant", REFRESH_TOKEN_2),
+      )
       .script(`GET ${ORG}/learners`, page([learnerBody]));
 
     await runSample("partner-grant", fake);
@@ -502,14 +505,14 @@ describe("README samples, run against a fake transport", () => {
     expect(saved).toEqual([REFRESH_TOKEN_2]);
     expect(
       fake.requestsTo(`GET ${ORG}/learners`)[0]?.headers.authorization,
-    ).toBe("Bearer jwt-grant");
+    ).toBe("Bearer access-token-grant");
     expect(logged).toEqual([[1]]);
   });
 
   runs("partner-organizations", async () => {
     const partnerId = "ptn_01JD8E2C3D4E5F6G7H8J9K0M1N";
     const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, tokenReply("jwt-partner"))
+      .script(TOKEN_ROUTE, tokenReply("access-token-partner"))
       .script(
         `GET /v1/partners/${partnerId}/organizations`,
         page([

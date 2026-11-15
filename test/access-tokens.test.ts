@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import TeachMeHipaa, { TeachMeHipaaError } from "../src/index.js";
+import { flushPendingWork } from "./support/client.js";
 import { createFakeClock } from "./support/fake-clock.js";
 import {
   createFakeTransport,
@@ -18,8 +19,6 @@ import {
 } from "./support/fixtures.js";
 
 const SECOND = 1000;
-
-const flushPendingWork = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("Access tokens", () => {
   it("mints exactly one Access token for two concurrent calls", async () => {
@@ -42,19 +41,23 @@ describe("Access tokens", () => {
       client.learners.retrieve(LEARNER_ID),
     ]);
     await flushPendingWork();
-    releaseToken(tokenReply("jwt-1"));
+    releaseToken(tokenReply("access-token-1"));
     await both;
 
     expect(fake.requestsTo(TOKEN_ROUTE)).toHaveLength(1);
     expect(
       fake.requestsTo(LEARNER_ROUTE).map((r) => r.headers.authorization),
-    ).toEqual(["Bearer jwt-1", "Bearer jwt-1"]);
+    ).toEqual(["Bearer access-token-1", "Bearer access-token-1"]);
   });
 
   it("re-mints the Access token 60 s before it expires", async () => {
     const clock = createFakeClock();
     const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, tokenReply("jwt-1", 900), tokenReply("jwt-2", 900))
+      .script(
+        TOKEN_ROUTE,
+        tokenReply("access-token-1", 900),
+        tokenReply("access-token-2", 900),
+      )
       .script(LEARNER_ROUTE, learnerReply(), learnerReply(), learnerReply());
     const client = new TeachMeHipaa({
       clientId: CLIENT_ID,
@@ -73,7 +76,11 @@ describe("Access tokens", () => {
     expect(fake.requestsTo(TOKEN_ROUTE)).toHaveLength(2);
     expect(
       fake.requestsTo(LEARNER_ROUTE).map((r) => r.headers.authorization),
-    ).toEqual(["Bearer jwt-1", "Bearer jwt-1", "Bearer jwt-2"]);
+    ).toEqual([
+      "Bearer access-token-1",
+      "Bearer access-token-1",
+      "Bearer access-token-2",
+    ]);
   });
 
   it("raises an OAuth error from the token endpoint and mints afresh on the next call", async () => {
@@ -91,7 +98,7 @@ describe("Access tokens", () => {
             error_description: "Client authentication failed.",
           },
         },
-        tokenReply("jwt-2"),
+        tokenReply("access-token-2"),
       )
       .script(LEARNER_ROUTE, learnerReply());
     const client = new TeachMeHipaa({
@@ -115,7 +122,7 @@ describe("Access tokens", () => {
     const learner = await client.learners.retrieve(LEARNER_ID);
     expect(learner.lastResponse.status).toBe(200);
     expect(fake.requestsTo(LEARNER_ROUTE)[0]?.headers.authorization).toBe(
-      "Bearer jwt-2",
+      "Bearer access-token-2",
     );
   });
 

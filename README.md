@@ -239,8 +239,10 @@ Request options, the last argument of every method:
 ## Conditional writes
 
 Updates that the API guards with ETags take `ifMatch`: the ETag string, or the
-object you read, whose `lastResponse.etag` the client sends. A stale ETag
-raises `PreconditionFailedError`. A PATCH sends only the fields you pass; pass
+object you read, whose `lastResponse.etag` the client sends. `learners.update`
+and `webhookSubscriptions.update` require it, since the API refuses them
+without one; on `learners.offboard` it is optional. A stale ETag raises
+`PreconditionFailedError`. A PATCH sends only the fields you pass; pass
 `null` to clear a field.
 
 ```ts sample=conditional-write
@@ -598,7 +600,7 @@ console.log(typeof client.learners.list);
 | `organizationId` | Looked up once with `auth.introspect` | The Organization to act for                                                        |
 | `maxRetries`     | `2`                                   | Retries of a failed call that is safe to replay                                    |
 | `timeout`        | `80000`                               | Milliseconds to wait for each response                                             |
-| `appInfo`        | None                                  | `{ name, version?, url? }` of your integration, sent in the `User-Agent`           |
+| `appInfo`        | None                                  | `{ name, version?, url? }` of your software, sent in the `User-Agent`              |
 | `logger`         | None                                  | Opt-in request logging; see [Logging](#logging)                                    |
 | `fetch`          | `globalThis.fetch`                    | A `fetch` to send requests with, e.g. one with a proxy dispatcher                  |
 | `transport`      | A `fetch` transport                   | Replaces the HTTP layer entirely, e.g. with a fake in tests (not with `fetch`)     |

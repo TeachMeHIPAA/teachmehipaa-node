@@ -5,6 +5,7 @@ import {
   type CachedToken,
   type TokenProvider,
 } from "./token-provider.js";
+import { optionsValidator, prefixed } from "./usage.js";
 
 /**
  * Where a Grant's Refresh token lives between processes, such as a database
@@ -36,20 +37,14 @@ export interface PartnerGrantOptions extends TokenEndpointOptions {
   readonly scopes?: readonly string[];
 }
 
-const invalid = (message: string): TypeError =>
-  new TypeError(`TeachMeHipaa: partnerGrantTokenProvider ${message}`);
-
-const requireText = (value: unknown, name: string): string => {
-  if (typeof value !== "string" || value.trim() === "") {
-    throw invalid(`needs ${name} as a non-empty string`);
-  }
-  return value;
-};
+const { invalid, requireNonEmptyString } = optionsValidator(
+  "partnerGrantTokenProvider",
+);
 
 const requireTokenStore = (value: unknown): TokenStore => {
   const store = value as Partial<TokenStore> | null | undefined;
   if (typeof store?.load !== "function" || typeof store.save !== "function") {
-    throw invalid("needs a tokenStore with load() and save(refreshToken)");
+    throw invalid("tokenStore must have load() and save(refreshToken) methods");
   }
   return store as TokenStore;
 };
@@ -63,7 +58,9 @@ const REFRESH_GUIDANCE = {
 
 const saveFailed = (cause: unknown): Error =>
   new Error(
-    "TeachMeHipaa: tokenStore.save() failed, so the new Access token was not used. Until a save succeeds, your store holds a superseded Refresh token, and exchanging it would revoke the Grant.",
+    prefixed(
+      "tokenStore.save() failed, so the new Access token was not used. Until a save succeeds, your store holds a superseded Refresh token, and exchanging it would revoke the Grant.",
+    ),
     { cause },
   );
 
@@ -76,8 +73,8 @@ export const partnerGrantTokenProvider = (
   options: PartnerGrantOptions,
 ): TokenProvider => {
   const credentials = {
-    clientId: requireText(options.clientId, "clientId"),
-    clientSecret: requireText(options.clientSecret, "clientSecret"),
+    clientId: requireNonEmptyString(options.clientId, "clientId"),
+    clientSecret: requireNonEmptyString(options.clientSecret, "clientSecret"),
   };
   const tokenStore = requireTokenStore(options.tokenStore);
   const endpoint = resolveTokenEndpoint(options);
@@ -85,7 +82,7 @@ export const partnerGrantTokenProvider = (
   let latest =
     options.refreshToken === undefined
       ? undefined
-      : requireText(options.refreshToken, "refreshToken");
+      : requireNonEmptyString(options.refreshToken, "refreshToken");
 
   const currentRefreshToken = async (): Promise<string> => {
     if (latest !== undefined) {
@@ -93,7 +90,7 @@ export const partnerGrantTokenProvider = (
     }
     const loaded: unknown = await tokenStore.load();
     if (typeof loaded !== "string" || loaded === "") {
-      throw invalid("got no Refresh token from tokenStore.load()");
+      throw invalid("tokenStore.load() returned no Refresh token");
     }
     return loaded;
   };

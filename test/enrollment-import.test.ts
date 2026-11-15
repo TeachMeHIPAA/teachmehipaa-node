@@ -3,19 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import TeachMeHipaa, { type Uploadable } from "../src/index.js";
-import { createFakeClock } from "./support/fake-clock.js";
-import {
-  createFakeTransport,
-  type FakeTransport,
-} from "./support/fake-transport.js";
-import {
-  CLIENT_ID,
-  CLIENT_SECRET,
-  ORG_ID,
-  TOKEN_ROUTE,
-  tokenReply,
-} from "./support/fixtures.js";
+import { type Uploadable } from "../src/index.js";
+import { clientOn } from "./support/client.js";
+import { createFakeTransport } from "./support/fake-transport.js";
+import { ORG_ID, TOKEN_ROUTE, tokenReply } from "./support/fixtures.js";
 import type { TransportRequest } from "../src/index.js";
 
 const ROUTE = `POST /v1/organizations/${ORG_ID}/enrollments:import`;
@@ -45,15 +36,6 @@ const operationBody = {
   kind: "enrollments.import",
   done: false,
 };
-
-const clientOn = (fake: FakeTransport) =>
-  new TeachMeHipaa({
-    clientId: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
-    organizationId: ORG_ID,
-    transport: fake.transport,
-    clock: createFakeClock(),
-  });
 
 /** The multipart parts as the API would read them. */
 const partsOf = async (request: TransportRequest | undefined) => {

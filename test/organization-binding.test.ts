@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
-import TeachMeHipaa, { TeachMeHipaaError } from "../src/index.js";
-import { createFakeClock } from "./support/fake-clock.js";
+import { TeachMeHipaaError } from "../src/index.js";
+import { clientOn } from "./support/client.js";
 import { createFakeTransport } from "./support/fake-transport.js";
 import {
-  CLIENT_ID,
-  CLIENT_SECRET,
   INTROSPECTION_ROUTE,
   LEARNER_ID,
   LEARNER_ROUTE,
@@ -14,25 +12,13 @@ import {
   tokenReply,
 } from "./support/fixtures.js";
 
-const clientOn = (
-  fake: ReturnType<typeof createFakeTransport>,
-  organizationId?: string,
-) =>
-  new TeachMeHipaa({
-    clientId: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
-    transport: fake.transport,
-    clock: createFakeClock(),
-    ...(organizationId === undefined ? {} : { organizationId }),
-  });
-
 describe("Organization binding", () => {
   it("resolves the Organization once and reuses it for later calls", async () => {
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, tokenReply())
       .script(INTROSPECTION_ROUTE, introspectionReply())
       .script(LEARNER_ROUTE, learnerReply(), learnerReply());
-    const client = clientOn(fake);
+    const client = clientOn(fake, { organizationId: null });
 
     await client.learners.retrieve(LEARNER_ID);
     await client.learners.retrieve(LEARNER_ID);
@@ -46,7 +32,7 @@ describe("Organization binding", () => {
       .script(TOKEN_ROUTE, tokenReply())
       .script(INTROSPECTION_ROUTE, introspectionReply())
       .script(LEARNER_ROUTE, learnerReply(), learnerReply());
-    const client = clientOn(fake);
+    const client = clientOn(fake, { organizationId: null });
 
     await Promise.all([
       client.learners.retrieve(LEARNER_ID),
@@ -63,7 +49,7 @@ describe("Organization binding", () => {
         `GET /v1/organizations/org_given/learners/${LEARNER_ID}`,
         learnerReply(),
       );
-    const client = clientOn(fake, "org_given");
+    const client = clientOn(fake, { organizationId: "org_given" });
 
     await client.learners.retrieve(LEARNER_ID);
 
@@ -90,7 +76,7 @@ describe("Organization binding", () => {
         introspectionReply(),
       )
       .script(LEARNER_ROUTE, learnerReply());
-    const client = clientOn(fake);
+    const client = clientOn(fake, { organizationId: null });
 
     await expect(client.learners.retrieve(LEARNER_ID)).rejects.toMatchObject({
       status: 503,
@@ -107,7 +93,7 @@ describe("Organization binding", () => {
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, tokenReply())
       .script(INTROSPECTION_ROUTE, introspectionReply(null));
-    const client = clientOn(fake);
+    const client = clientOn(fake, { organizationId: null });
 
     const error: unknown = await client.learners
       .retrieve(LEARNER_ID)

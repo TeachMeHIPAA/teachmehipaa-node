@@ -1,21 +1,16 @@
 import { describe, expect, it } from "vitest";
-import TeachMeHipaa, { PreconditionFailedError } from "../src/index.js";
+import { PreconditionFailedError } from "../src/index.js";
+import { clientOn } from "./support/client.js";
+import { createFakeTransport } from "./support/fake-transport.js";
 import {
-  createFakeTransport,
-  type FakeTransport,
-} from "./support/fake-transport.js";
-import {
-  CLIENT_ID,
-  CLIENT_SECRET,
   LEARNER_ID,
   LEARNER_ROUTE,
-  ORG_ID,
+  ORG,
   TOKEN_ROUTE,
   learnerReply,
   tokenReply,
 } from "./support/fixtures.js";
 
-const ORG = `/v1/organizations/${ORG_ID}`;
 const UPDATE_ROUTE = `PATCH ${ORG}/learners/${LEARNER_ID}`;
 const SUBSCRIPTION_ID = "whs_01JD8D";
 const SUBSCRIPTION_ROUTE = `PATCH ${ORG}/webhook-subscriptions/${SUBSCRIPTION_ID}`;
@@ -58,14 +53,6 @@ const preconditionRequired = {
     detail: "Send If-Match with the resource's current ETag.",
   },
 };
-
-const clientOn = (fake: FakeTransport) =>
-  new TeachMeHipaa({
-    clientId: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
-    organizationId: ORG_ID,
-    transport: fake.transport,
-  });
 
 describe("Conditional writes", () => {
   it("sends ifMatch as If-Match on a Learner update", async () => {
@@ -138,14 +125,33 @@ describe("Conditional writes", () => {
     expect(fake.requestsTo(UPDATE_ROUTE)).toHaveLength(1);
   });
 
-  it("compiles without ifMatch and raises PreconditionFailedError for the API's 428", async () => {
+  it("requires ifMatch where the API refuses a write without it, and only there", () => {
+    const client = clientOn(createFakeTransport());
+    // Type-checked by `npm run typecheck`, never called.
+    const calls = () => [
+      // @ts-expect-error learners.update needs ifMatch
+      client.learners.update(LEARNER_ID, { name: "Ana Example" }),
+      // @ts-expect-error learners.update needs ifMatch
+      client.learners.update(LEARNER_ID, { name: "Ana Example" }, {}),
+      // @ts-expect-error webhookSubscriptions.update needs ifMatch
+      client.webhookSubscriptions.update(SUBSCRIPTION_ID, { enabled: false }),
+      client.learners.offboard(LEARNER_ID),
+    ];
+
+    expect(calls).toBeTypeOf("function");
+  });
+
+  it("raises PreconditionFailedError for the API's 428 when JavaScript leaves ifMatch out", async () => {
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, tokenReply())
       .script(SUBSCRIPTION_ROUTE, preconditionRequired);
+    const untypedOptions = {} as { readonly ifMatch: string };
 
-    const update = clientOn(fake).webhookSubscriptions.update(SUBSCRIPTION_ID, {
-      enabled: false,
-    });
+    const update = clientOn(fake).webhookSubscriptions.update(
+      SUBSCRIPTION_ID,
+      { enabled: false },
+      untypedOptions,
+    );
 
     await expect(update).rejects.toBeInstanceOf(PreconditionFailedError);
     await expect(update).rejects.toMatchObject({

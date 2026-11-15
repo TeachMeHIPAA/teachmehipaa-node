@@ -2,6 +2,7 @@ import { systemClock, type Clock } from "./clock.js";
 import { withRequestLogging, type Logger } from "./logging.js";
 import type { TokenEndpoint, TokenProvider } from "./token-provider.js";
 import { fetchTransport, type Transport } from "./transport.js";
+import { optionsValidator } from "./usage.js";
 import { buildUserAgent, type AppInfo } from "./user-agent.js";
 
 export type Environment = "live" | "sandbox";
@@ -28,7 +29,7 @@ interface SharedClientOptions {
   readonly maxRetries?: number;
   /** Milliseconds to wait for each response. Defaults to 80 000. */
   readonly timeout?: number;
-  /** Your integration's name, version and URL, sent in the User-Agent. */
+  /** Your software's name, version and URL, sent in the User-Agent. */
   readonly appInfo?: AppInfo;
   /**
    * A `fetch` to send requests with, e.g. one with a proxy dispatcher.
@@ -123,15 +124,7 @@ const KNOWN_OPTIONS: ReadonlySet<string> = new Set<
 const DEFAULT_MAX_RETRIES = 2;
 const DEFAULT_TIMEOUT_MS = 80_000;
 
-const invalid = (message: string): TypeError =>
-  new TypeError(`TeachMeHipaa: ${message}`);
-
-const requireNonEmptyString = (value: unknown, name: string): string => {
-  if (typeof value !== "string" || value.trim() === "") {
-    throw invalid(`${name} must be a non-empty string`);
-  }
-  return value;
-};
+const { invalid, requireNonEmptyString } = optionsValidator();
 
 const optionalNonEmptyString = (
   value: unknown,
@@ -280,22 +273,16 @@ const resolveAuth = (options: ClientOptions): ResolvedAuth => {
 };
 
 /** Settings for calling the token endpoint without a client. */
-export interface TokenEndpointOptions {
-  /** Defaults to `live`. */
-  readonly environment?: Environment;
-  /** Overrides the Environment's base URL, e.g. to point at a mock server. */
-  readonly baseUrl?: string;
-  /** Milliseconds to wait for the response. Defaults to 80 000. */
-  readonly timeout?: number;
-  /** Your integration's name, version and URL, sent in the User-Agent. */
-  readonly appInfo?: AppInfo;
-  /** A `fetch` to send the request with. Give this or `transport`. */
-  readonly fetch?: typeof fetch;
-  /** Replaces the HTTP layer, e.g. with a fake in tests. */
-  readonly transport?: Transport;
-  /** Supplies the current time. For tests; defaults to real time. */
-  readonly clock?: Clock;
-}
+export type TokenEndpointOptions = Pick<
+  SharedClientOptions,
+  | "environment"
+  | "baseUrl"
+  | "timeout"
+  | "appInfo"
+  | "fetch"
+  | "transport"
+  | "clock"
+>;
 
 export const resolveTokenEndpoint = (
   options: TokenEndpointOptions,

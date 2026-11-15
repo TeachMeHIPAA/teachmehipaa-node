@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Clock } from "./clock.js";
-import { TeachMeHipaaError } from "./errors.js";
+import { TeachMeHipaaError, noResponseDetails } from "./errors.js";
 import { createOrganizationBinding } from "./organization.js";
 import {
   connectionError,
@@ -26,6 +26,7 @@ import {
 import type { TokenProvider } from "./token-provider.js";
 import type { HttpMethod, Transport } from "./transport.js";
 import { multipartBody, type BinaryPart } from "./uploads.js";
+import { usageError } from "./usage.js";
 
 export type QueryParams = Readonly<
   Record<string, string | number | boolean | undefined>
@@ -78,7 +79,7 @@ export type ExpectedResponse =
   | { readonly kind: "json" }
   /** A Learner write: `created` is set from 201 (created) vs 200 (existing). */
   | { readonly kind: "writeResult" }
-  /** No body (204); success is the status alone. */
+  /** No body (204); success is the status alone, unless a non-JSON body came. */
   | { readonly kind: "empty" }
   | {
       readonly kind: "binary";
@@ -184,8 +185,10 @@ const successValue = (
   expected: ExpectedResponse,
 ): object | null => {
   switch (expected.kind) {
+    // Nothing, or JSON, is fine; a 200 HTML page from a wrong base URL is not
+    // a deleted object.
     case "empty":
-      return {};
+      return body.json || body.value === "" ? {} : null;
     case "binary":
       return null;
     case "json":
@@ -206,8 +209,8 @@ const etagOf = (source: ETagSource, header: string): string => {
   }
   const { etag } = source.lastResponse;
   if (etag === null) {
-    throw new TypeError(
-      `TeachMeHipaa: ${header} was given an object whose response had no ETag`,
+    throw usageError(
+      `${header} was given an object whose response had no ETag`,
     );
   }
   return etag;
@@ -220,7 +223,7 @@ const expandPath = (
   template.replace(/\{(\w+)\}/g, (_, name: string) => {
     const value = params[name];
     if (value === undefined) {
-      throw new TypeError(`Missing path parameter "${name}"`);
+      throw usageError(`missing path parameter "${name}"`);
     }
     return encodeURIComponent(value);
   });
@@ -423,13 +426,10 @@ export const createRequester = (settings: RequesterSettings): Requester => {
     }
     const { lastResponse } = introspection;
     throw new TeachMeHipaaError({
-      message:
+      ...noResponseDetails(
         "The Access token is not bound to an Organization. Pass organizationId when you create the client.",
+      ),
       status: lastResponse.status,
-      code: null,
-      title: null,
-      detail: null,
-      errors: [],
       requestId: lastResponse.requestId,
       headers: lastResponse.headers,
       raw: introspection,

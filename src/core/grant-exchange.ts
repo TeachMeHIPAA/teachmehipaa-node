@@ -4,6 +4,7 @@ import {
   OAuthError,
   TeachMeHipaaError,
   TimeoutError,
+  noResponseDetails,
   type TeachMeHipaaErrorDetails,
 } from "./errors.js";
 import {
@@ -72,17 +73,11 @@ const withGuidance = (error: unknown, guidance: ExchangeGuidance): unknown => {
 };
 
 const missingRefreshToken = (): ApiError =>
+  // `raw` stays null: the body holds a live Access token, which must not
+  // reach error reporters.
   new ApiError({
-    message: "The token endpoint answered without a refresh_token",
+    ...noResponseDetails("The token endpoint answered without a refresh_token"),
     status: 200,
-    code: null,
-    title: null,
-    detail: null,
-    errors: [],
-    requestId: null,
-    headers: {},
-    // The body holds a live Access token, which must not reach error reporters.
-    raw: null,
   });
 
 /**

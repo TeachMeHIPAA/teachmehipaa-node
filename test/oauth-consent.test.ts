@@ -125,7 +125,7 @@ describe("Code exchange", () => {
   it("exchanges the code for an Access token, Refresh token, expiry and Scopes", async () => {
     const fake = createFakeTransport().script(
       TOKEN_ROUTE,
-      grantTokenReply("jwt-org", REFRESH_TOKEN_1, 900),
+      grantTokenReply("access-token-org", REFRESH_TOKEN_1, 900),
     );
 
     const grant = await TeachMeHipaa.oauth.exchangeCode({
@@ -134,7 +134,7 @@ describe("Code exchange", () => {
     });
 
     expect(grant).toEqual({
-      accessToken: "jwt-org",
+      accessToken: "access-token-org",
       refreshToken: REFRESH_TOKEN_1,
       expiresIn: 900,
       scopes: ["learners:read", "learners:write"],
@@ -156,7 +156,7 @@ describe("Code exchange", () => {
   it("exchanges against the Sandbox token endpoint when asked", async () => {
     const fake = createFakeTransport().script(
       TOKEN_ROUTE,
-      grantTokenReply("jwt-org", REFRESH_TOKEN_1),
+      grantTokenReply("access-token-org", REFRESH_TOKEN_1),
     );
 
     await TeachMeHipaa.oauth.exchangeCode({
@@ -221,7 +221,11 @@ describe("Code exchange", () => {
 
   it("raises an ApiError when the token endpoint returns no Refresh token", async () => {
     const fake = createFakeTransport().script(TOKEN_ROUTE, {
-      json: { access_token: "jwt-org", token_type: "Bearer", expires_in: 900 },
+      json: {
+        access_token: "access-token-org",
+        token_type: "Bearer",
+        expires_in: 900,
+      },
     });
 
     await expect(

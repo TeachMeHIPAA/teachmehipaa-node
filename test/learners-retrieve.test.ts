@@ -18,7 +18,7 @@ import {
 describe("learners.retrieve", () => {
   it("authenticates with client credentials, binds the Organization and returns the Learner", async () => {
     const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, tokenReply("jwt-1"))
+      .script(TOKEN_ROUTE, tokenReply("access-token-1"))
       .script(INTROSPECTION_ROUTE, introspectionReply())
       .script(LEARNER_ROUTE, learnerReply());
     const client = new TeachMeHipaa({
@@ -42,13 +42,13 @@ describe("learners.retrieve", () => {
     expect(tokenRequest?.body).toBe("grant_type=client_credentials");
 
     expect(introspection?.url).toBe("https://api.tme.so/v1/auth/introspection");
-    expect(introspection?.headers.authorization).toBe("Bearer jwt-1");
+    expect(introspection?.headers.authorization).toBe("Bearer access-token-1");
 
     expect(retrieve?.method).toBe("GET");
     expect(retrieve?.url).toBe(
       `https://api.tme.so/v1/organizations/org_acme/learners/${LEARNER_ID}`,
     );
-    expect(retrieve?.headers.authorization).toBe("Bearer jwt-1");
+    expect(retrieve?.headers.authorization).toBe("Bearer access-token-1");
     expect(retrieve?.headers.accept).toBe("application/json");
   });
 

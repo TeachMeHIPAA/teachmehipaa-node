@@ -1,16 +1,8 @@
 import { describe, expect, it } from "vitest";
-import TeachMeHipaa, { ApiError, NotFoundError } from "../src/index.js";
-import {
-  createFakeTransport,
-  type FakeTransport,
-} from "./support/fake-transport.js";
-import {
-  CLIENT_ID,
-  CLIENT_SECRET,
-  ORG_ID,
-  TOKEN_ROUTE,
-  tokenReply,
-} from "./support/fixtures.js";
+import { ApiError, NotFoundError } from "../src/index.js";
+import { clientOn } from "./support/client.js";
+import { createFakeTransport } from "./support/fake-transport.js";
+import { ORG_ID, TOKEN_ROUTE, tokenReply } from "./support/fixtures.js";
 
 const CERTIFICATE_ID = "cert_01JD8F";
 const ROUTE = `GET /v1/organizations/${ORG_ID}/certificates/${CERTIFICATE_ID}/content`;
@@ -25,14 +17,6 @@ const pdfReply = {
   },
   bytes: EVERY_BYTE,
 };
-
-const clientOn = (fake: FakeTransport) =>
-  new TeachMeHipaa({
-    clientId: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
-    organizationId: ORG_ID,
-    transport: fake.transport,
-  });
 
 describe("Certificate PDF download", () => {
   it("returns every byte 0x00-0xFF unchanged, with content type and filename", async () => {

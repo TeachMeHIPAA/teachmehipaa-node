@@ -55,6 +55,7 @@ export type {
   DownloadOptions,
   ETagSource,
   RequestOptions,
+  RequiredConditionalWriteOptions,
 } from "./core/request-options.js";
 export type {
   BinaryResponse,
@@ -73,6 +74,7 @@ export type {
   ExportResult,
   Operation,
   OperationWaitOptions,
+  UnknownWebhookDeliveryResult,
   WebhookDeliveryResult,
 } from "./core/operations.js";
 export type * from "./models/index.js";

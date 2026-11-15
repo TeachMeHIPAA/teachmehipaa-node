@@ -37,6 +37,14 @@ export interface ConditionalWriteOptions extends RequestOptions {
   readonly ifMatch?: ETagSource;
 }
 
+/**
+ * Options for a write the API refuses without the object's ETag: it answers
+ * 428 when `ifMatch` is missing, so the type requires it.
+ */
+export interface RequiredConditionalWriteOptions extends ConditionalWriteOptions {
+  readonly ifMatch: ETagSource;
+}
+
 /** Options for a read the API can skip when your copy is current. */
 export interface ConditionalReadOptions extends RequestOptions {
   /**

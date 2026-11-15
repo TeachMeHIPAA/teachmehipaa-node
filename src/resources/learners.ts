@@ -4,6 +4,7 @@ import { requestPage, type PagePromise } from "../core/pagination.js";
 import type {
   ConditionalWriteOptions,
   RequestOptions,
+  RequiredConditionalWriteOptions,
 } from "../core/request-options.js";
 import type { Requester } from "../core/requester.js";
 import type { WithLastResponse } from "../core/response.js";
@@ -286,7 +287,7 @@ export class Learners {
   update(
     learnerId: string,
     params: LearnerUpdateParams,
-    options?: ConditionalWriteOptions,
+    options: RequiredConditionalWriteOptions,
   ): Promise<WithLastResponse<Learner>> {
     const { courseId, ...body } = params;
     return this.#requester.request<Learner>({
@@ -300,7 +301,7 @@ export class Learners {
       query: { courseId },
       body: body,
       contentType: "application/merge-patch+json",
-      ifMatch: options?.ifMatch,
+      ifMatch: options.ifMatch,
       options,
     });
   }

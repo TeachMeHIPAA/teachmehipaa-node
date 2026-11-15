@@ -77,7 +77,7 @@ describe("Public endpoints (security: none)", () => {
     });
     const client = new TeachMeHipaa({
       tokenProvider: {
-        getAccessToken: () => Promise.resolve("jwt-static"),
+        getAccessToken: () => Promise.resolve("access-token-static"),
         invalidate: () => undefined,
       },
       transport: fake.transport,
@@ -85,6 +85,8 @@ describe("Public endpoints (security: none)", () => {
 
     await client.auth.introspect();
 
-    expect(fake.requests[0]?.headers.authorization).toBe("Bearer jwt-static");
+    expect(fake.requests[0]?.headers.authorization).toBe(
+      "Bearer access-token-static",
+    );
   });
 });

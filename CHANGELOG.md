@@ -28,7 +28,9 @@ Generated from the Developer API document release `waggish-wombat`.
   `PreconditionFailedError`, `IdempotencyError`, `RateLimitError`,
   `ApiError`, `ConnectionError`, `TimeoutError`, `OAuthError`) carrying the
   problem `code`, `detail`, field errors and `requestId`, with a guard that
-  raises `ApiError` for non-JSON responses.
+  raises `ApiError` for non-JSON responses, including a 2xx with a non-JSON
+  body where no content is expected. Mistakes in calling the library raise
+  a `TypeError` whose message starts `teachmehipaa:`.
 - Retries with exponential backoff and jitter for network errors, 409
   `conflict`, 429 and 5xx, honoring `Retry-After`, only for calls that are
   safe to replay; a generated `Idempotency-Key` per create and custom method,
@@ -40,8 +42,12 @@ Generated from the Developer API document release `waggish-wombat`.
 - Auto-paging lists: await the first page, `for await` every item,
   `autoPagingToArray`, `hasNextPage` and `getNextPage`.
 - Conditional writes and reads with ETags, and merge-patch updates that tell
-  an omitted field from one set to `null`.
-- Operations with `wait()` and `exportResult()` for export CSVs.
+  an omitted field from one set to `null`. `ifMatch` is required on
+  `learners.update` and `webhookSubscriptions.update`, which the API refuses
+  without it.
+- Operations with `wait()` and `exportResult()` for export CSVs. Test
+  delivery and redrive results are typed by `_tag`, with
+  `UnknownWebhookDeliveryResult` for tags added later.
 - Enrollment CSV imports from a file path, bytes, a `Blob` or a stream, and
   Certificate PDF downloads as bytes or a stream.
 - `webhooks.constructEvent`, which verifies a Delivery's signature, body hash,
