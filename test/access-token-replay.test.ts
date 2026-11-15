@@ -4,7 +4,7 @@ import TeachMeHipaa, {
   AuthenticationError,
   ConnectionError,
   OAuthError,
-  type TeachMeHipaaOptions,
+  type ClientCredentialsOptions,
 } from "../src/index.js";
 import { createFakeClock } from "./support/fake-clock.js";
 import {
@@ -51,7 +51,7 @@ const networkFailure: ScriptStep = () => {
 
 const clientOn = (
   fake: FakeTransport,
-  options: Partial<TeachMeHipaaOptions> = {},
+  options: Partial<ClientCredentialsOptions> = {},
 ) =>
   new TeachMeHipaa({
     clientId: CLIENT_ID,

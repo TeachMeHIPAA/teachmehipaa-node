@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import TeachMeHipaa, { type TeachMeHipaaOptions } from "../src/index.js";
+import TeachMeHipaa, {
+  type ClientCredentialsOptions,
+  type TeachMeHipaaOptions,
+} from "../src/index.js";
 import { createFakeTransport, textBody } from "./support/fake-transport.js";
 import {
   CLIENT_ID,
@@ -18,7 +21,10 @@ const scriptedRetrieve = () =>
     .script(LEARNER_ROUTE, learnerReply());
 
 const urlsSentBy = async (
-  options: Omit<TeachMeHipaaOptions, "clientId" | "clientSecret" | "transport">,
+  options: Omit<
+    ClientCredentialsOptions,
+    "clientId" | "clientSecret" | "transport"
+  >,
 ): Promise<readonly string[]> => {
   const fake = scriptedRetrieve();
   const client = new TeachMeHipaa({

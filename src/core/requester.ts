@@ -325,7 +325,10 @@ export const createRequester = (settings: RequesterSettings): Requester => {
       }
       replayed = true;
       tokenProvider.invalidate(accessToken);
-      return exchange<T>(call, await tokenProvider.getAccessToken());
+      const renewed = await tokenProvider.getAccessToken();
+      // A provider that can't renew (a static token) hands back the same
+      // token, which the API would only refuse again.
+      return renewed === accessToken ? outcome : exchange<T>(call, renewed);
     };
     return withRetries(attempt, {
       maxRetries: call.maxRetries,

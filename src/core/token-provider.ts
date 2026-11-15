@@ -113,16 +113,54 @@ export interface ClientCredentialsSettings extends TokenEndpoint {
   readonly maxRetries: number;
 }
 
-interface CachedToken {
+/** An Access token and when it stops working, in clock milliseconds. */
+export interface CachedToken {
   readonly accessToken: string;
   readonly expiresAt: number;
 }
 
 const REMINT_MARGIN_MS = 60_000;
 
+/**
+ * The caching every minting provider shares: re-mint 60 s before expiry,
+ * one mint in flight at a time, and forget a token the API rejected.
+ */
+export const cachingTokenProvider = (
+  mint: () => Promise<CachedToken>,
+  clock: Clock,
+): TokenProvider => {
+  let current: CachedToken | undefined;
+  let inFlight: Promise<CachedToken> | undefined;
+
+  const isFresh = (token: CachedToken): boolean =>
+    clock.now() < token.expiresAt - REMINT_MARGIN_MS;
+
+  return {
+    async getAccessToken() {
+      if (current !== undefined && isFresh(current)) {
+        return current.accessToken;
+      }
+      inFlight ??= mint()
+        .then((token) => (current = token))
+        .finally(() => {
+          inFlight = undefined;
+        });
+      return (await inFlight).accessToken;
+    },
+    invalidate(accessToken) {
+      if (current?.accessToken === accessToken) {
+        current = undefined;
+      }
+    },
+  };
+};
+
 // RFC 6749 §2.3.1: Basic credentials are form-encoded before base64.
-const basicCredentials = (clientId: string, clientSecret: string): string =>
-  btoa(`${encodeURIComponent(clientId)}:${encodeURIComponent(clientSecret)}`);
+export const basicAuthorization = (
+  clientId: string,
+  clientSecret: string,
+): string =>
+  `Basic ${btoa(`${encodeURIComponent(clientId)}:${encodeURIComponent(clientSecret)}`)}`;
 
 export const clientCredentialsTokenProvider = (
   settings: ClientCredentialsSettings,
@@ -132,42 +170,36 @@ export const clientCredentialsTokenProvider = (
   if (settings.scopes !== undefined && settings.scopes.length > 0) {
     form.set("scope", settings.scopes.join(" "));
   }
-  const authorization = `Basic ${basicCredentials(settings.clientId, settings.clientSecret)}`;
-
-  let current: CachedToken | undefined;
-  let inFlight: Promise<CachedToken> | undefined;
-
-  const mint = async (): Promise<CachedToken> => {
+  const authorization = basicAuthorization(
+    settings.clientId,
+    settings.clientSecret,
+  );
+  return cachingTokenProvider(async () => {
     const { token, requestedAt } = await exchangeAtTokenEndpoint(
       settings,
       form,
       authorization,
       settings.maxRetries,
     );
-    current = {
+    return {
       accessToken: token.access_token,
       expiresAt: requestedAt + token.expires_in * 1000,
     };
-    return current;
-  };
+  }, settings.clock);
+};
 
-  const isFresh = (token: CachedToken): boolean =>
-    settings.clock.now() < token.expiresAt - REMINT_MARGIN_MS;
-
+/**
+ * Sends an Access token you obtained yourself, as is. It is never renewed:
+ * once it expires or is revoked, calls raise `AuthenticationError`.
+ */
+export const staticTokenProvider = (accessToken: string): TokenProvider => {
+  if (typeof accessToken !== "string" || accessToken.trim() === "") {
+    throw new TypeError(
+      "TeachMeHipaa: staticTokenProvider needs a non-empty Access token",
+    );
+  }
   return {
-    async getAccessToken() {
-      if (current !== undefined && isFresh(current)) {
-        return current.accessToken;
-      }
-      inFlight ??= mint().finally(() => {
-        inFlight = undefined;
-      });
-      return (await inFlight).accessToken;
-    },
-    invalidate(accessToken) {
-      if (current?.accessToken === accessToken) {
-        current = undefined;
-      }
-    },
+    getAccessToken: () => Promise.resolve(accessToken),
+    invalidate: () => undefined,
   };
 };

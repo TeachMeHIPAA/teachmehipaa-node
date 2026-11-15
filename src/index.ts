@@ -2,6 +2,9 @@ import { TeachMeHipaa } from "./client.js";
 
 export { TeachMeHipaa };
 export { webhooks } from "./core/webhooks.js";
+export { oauth } from "./core/oauth.js";
+export { partnerGrantTokenProvider } from "./core/partner-grant.js";
+export { staticTokenProvider } from "./core/token-provider.js";
 export { operationIdFromName } from "./core/operations.js";
 export {
   ApiError,
@@ -29,7 +32,20 @@ export type {
   WebhookHeaders,
   Webhooks,
 } from "./core/webhooks.js";
-export type { Environment } from "./core/config.js";
+export type {
+  ClientCredentialsOptions,
+  Environment,
+  TokenEndpointOptions,
+  TokenProviderOptions,
+} from "./core/config.js";
+export type { TokenProvider } from "./core/token-provider.js";
+export type { PartnerGrantOptions, TokenStore } from "./core/partner-grant.js";
+export type {
+  AuthorizeUrlParams,
+  ExchangeCodeParams,
+  PkcePair,
+} from "./core/oauth.js";
+export type { GrantTokens } from "./core/grant-exchange.js";
 export type { Clock } from "./core/clock.js";
 export type { AppInfo } from "./core/user-agent.js";
 export type { Logger, RequestLogFields } from "./core/logging.js";

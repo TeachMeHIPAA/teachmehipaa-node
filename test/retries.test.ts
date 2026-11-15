@@ -5,7 +5,7 @@ import TeachMeHipaa, {
   ConnectionError,
   NotFoundError,
   RateLimitError,
-  type TeachMeHipaaOptions,
+  type ClientCredentialsOptions,
 } from "../src/index.js";
 import { createFakeClock } from "./support/fake-clock.js";
 import {
@@ -42,7 +42,7 @@ const networkFailure: ScriptStep = () => {
 
 const clientWith = (
   fake: FakeTransport,
-  options: Partial<TeachMeHipaaOptions> = {},
+  options: Partial<ClientCredentialsOptions> = {},
 ) => {
   const clock = createFakeClock();
   const client = new TeachMeHipaa({

@@ -1,5 +1,6 @@
 import { systemClock, type Clock } from "./clock.js";
 import { withRequestLogging, type Logger } from "./logging.js";
+import type { TokenEndpoint, TokenProvider } from "./token-provider.js";
 import { fetchTransport, type Transport } from "./transport.js";
 import { buildUserAgent, type AppInfo } from "./user-agent.js";
 
@@ -10,11 +11,7 @@ export const ENVIRONMENT_BASE_URLS: Readonly<Record<Environment, string>> = {
   sandbox: "https://api-teachmehipaa-dev.web.app/v1",
 };
 
-export interface ClientOptions {
-  /** Your API client's id (`cli_…`). */
-  readonly clientId: string;
-  /** Your API client's secret (`tmh_cs_…`). */
-  readonly clientSecret: string;
+interface SharedClientOptions {
   /**
    * Which TeachMeHIPAA deployment your credentials belong to. Defaults to
    * `live`; Sandbox credentials never work against Live.
@@ -27,11 +24,6 @@ export interface ClientOptions {
    * from the Access token.
    */
   readonly organizationId?: string;
-  /**
-   * The Scopes to request, such as `learners:write`. Defaults to every Scope
-   * the API client holds.
-   */
-  readonly scopes?: readonly string[];
   /** Retries for a failed request that is safe to replay. Defaults to 2. */
   readonly maxRetries?: number;
   /** Milliseconds to wait for each response. Defaults to 80 000. */
@@ -57,12 +49,51 @@ export interface ClientOptions {
   readonly clock?: Clock;
 }
 
-export interface ResolvedConfig {
+/** Authenticate with an API client's, or a Partner's, own credentials. */
+export interface ClientCredentialsOptions extends SharedClientOptions {
+  /**
+   * Your API client's id (`cli_…`), or your Partner app's id (`app_…`) for
+   * a Partner-level token that calls `partners.*`.
+   */
   readonly clientId: string;
+  /** Your API client's secret (`tmh_cs_…`) or Partner app's (`tmh_as_…`). */
   readonly clientSecret: string;
+  /**
+   * The Scopes to request, such as `learners:write`. Defaults to every Scope
+   * the API client holds.
+   */
+  readonly scopes?: readonly string[];
+  readonly tokenProvider?: never;
+}
+
+/** Authenticate with Access tokens from somewhere else, such as a Grant. */
+export interface TokenProviderOptions extends SharedClientOptions {
+  /**
+   * Supplies every Access token, e.g. `partnerGrantTokenProvider(...)` or
+   * `staticTokenProvider(...)`. Give this or `clientId` and `clientSecret`.
+   */
+  readonly tokenProvider: TokenProvider;
+  readonly clientId?: never;
+  readonly clientSecret?: never;
+  readonly scopes?: never;
+}
+
+export type ClientOptions = ClientCredentialsOptions | TokenProviderOptions;
+
+/** How the client gets Access tokens. */
+export type ResolvedAuth =
+  | {
+      readonly kind: "clientCredentials";
+      readonly clientId: string;
+      readonly clientSecret: string;
+      readonly scopes: readonly string[] | undefined;
+    }
+  | { readonly kind: "tokenProvider"; readonly tokenProvider: TokenProvider };
+
+export interface ResolvedConfig {
+  readonly auth: ResolvedAuth;
   readonly baseUrl: string;
   readonly organizationId: string | undefined;
-  readonly scopes: readonly string[] | undefined;
   readonly maxRetries: number;
   readonly timeout: number;
   readonly userAgent: string;
@@ -70,9 +101,12 @@ export interface ResolvedConfig {
   readonly clock: Clock;
 }
 
-const KNOWN_OPTIONS: ReadonlySet<string> = new Set<keyof ClientOptions>([
+const KNOWN_OPTIONS: ReadonlySet<string> = new Set<
+  keyof ClientCredentialsOptions | keyof TokenProviderOptions
+>([
   "clientId",
   "clientSecret",
+  "tokenProvider",
   "environment",
   "baseUrl",
   "organizationId",
@@ -204,6 +238,78 @@ const resolveAppInfo = (value: unknown): AppInfo | undefined => {
   };
 };
 
+const resolveTokenProvider = (value: unknown): TokenProvider => {
+  const provider = value as Partial<TokenProvider> | null;
+  if (
+    typeof provider?.getAccessToken !== "function" ||
+    typeof provider.invalidate !== "function"
+  ) {
+    throw invalid(
+      "tokenProvider must have getAccessToken() and invalidate(accessToken) methods",
+    );
+  }
+  return provider as TokenProvider;
+};
+
+const resolveAuth = (options: ClientOptions): ResolvedAuth => {
+  if (options.tokenProvider === undefined) {
+    return {
+      kind: "clientCredentials",
+      clientId: requireNonEmptyString(options.clientId, "clientId"),
+      clientSecret: requireNonEmptyString(options.clientSecret, "clientSecret"),
+      scopes: resolveScopes(options.scopes),
+    };
+  }
+  // The types forbid mixing them, but JavaScript callers aren't checked.
+  const conflicting = Object.entries(options)
+    .filter(
+      ([name, value]) =>
+        ["clientId", "clientSecret", "scopes"].includes(name) &&
+        value !== undefined,
+    )
+    .map(([name]) => name);
+  if (conflicting.length > 0) {
+    throw invalid(
+      `give either tokenProvider or clientId and clientSecret, not both (got ${conflicting.join(", ")} too; scopes belong to the token provider)`,
+    );
+  }
+  return {
+    kind: "tokenProvider",
+    tokenProvider: resolveTokenProvider(options.tokenProvider),
+  };
+};
+
+/** Settings for calling the token endpoint without a client. */
+export interface TokenEndpointOptions {
+  /** Defaults to `live`. */
+  readonly environment?: Environment;
+  /** Overrides the Environment's base URL, e.g. to point at a mock server. */
+  readonly baseUrl?: string;
+  /** Milliseconds to wait for the response. Defaults to 80 000. */
+  readonly timeout?: number;
+  /** Your integration's name, version and URL, sent in the User-Agent. */
+  readonly appInfo?: AppInfo;
+  /** A `fetch` to send the request with. Give this or `transport`. */
+  readonly fetch?: typeof fetch;
+  /** Replaces the HTTP layer, e.g. with a fake in tests. */
+  readonly transport?: Transport;
+  /** Supplies the current time. For tests; defaults to real time. */
+  readonly clock?: Clock;
+}
+
+export const resolveTokenEndpoint = (
+  options: TokenEndpointOptions,
+): TokenEndpoint => {
+  const baseUrl = resolveBaseUrl(options.environment, options.baseUrl);
+  return Object.freeze({
+    tokenUrl: `${baseUrl}/auth/token`,
+    userAgent: buildUserAgent(resolveAppInfo(options.appInfo)),
+    transport: resolveTransport(options.fetch, options.transport),
+    timeout: resolveTimeout(options.timeout),
+    clock: options.clock ?? systemClock,
+  });
+};
+
 /** Validates options once and copies them, so later edits have no effect. */
 export const resolveConfig = (options: ClientOptions): ResolvedConfig => {
   const unknown = Object.keys(options).filter((key) => !KNOWN_OPTIONS.has(key));
@@ -214,14 +320,12 @@ export const resolveConfig = (options: ClientOptions): ResolvedConfig => {
   const transport = resolveTransport(options.fetch, options.transport);
   const logger = resolveLogger(options.logger);
   return Object.freeze({
-    clientId: requireNonEmptyString(options.clientId, "clientId"),
-    clientSecret: requireNonEmptyString(options.clientSecret, "clientSecret"),
+    auth: resolveAuth(options),
     baseUrl: resolveBaseUrl(options.environment, options.baseUrl),
     organizationId: optionalNonEmptyString(
       options.organizationId,
       "organizationId",
     ),
-    scopes: resolveScopes(options.scopes),
     maxRetries: resolveMaxRetries(options.maxRetries),
     timeout: resolveTimeout(options.timeout),
     userAgent: buildUserAgent(resolveAppInfo(options.appInfo)),
