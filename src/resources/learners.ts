@@ -170,22 +170,26 @@ export class Learners {
     params?: LearnerListParams,
     options?: RequestOptions,
   ): PagePromise<Learner> {
-    return requestPage<Learner>(this.#requester, {
-      method: "GET",
-      path: "/learners",
-      organizationScoped: true,
-      retrySafe: true,
-      idempotencyKey: "none",
-      query: {
-        limit: params?.limit,
-        cursor: params?.cursor,
-        email: params?.email,
-        externalId: params?.externalId,
-        status: params?.status,
-        courseId: params?.courseId,
+    return requestPage<Learner>(
+      this.#requester,
+      {
+        method: "GET",
+        path: "/learners",
+        organizationScoped: true,
+        retrySafe: true,
+        idempotencyKey: "none",
+        query: {
+          limit: params?.limit,
+          cursor: params?.cursor,
+          email: params?.email,
+          externalId: params?.externalId,
+          status: params?.status,
+          courseId: params?.courseId,
+        },
+        options,
       },
-      options,
-    });
+      { style: "cursor", cursorParam: "cursor" },
+    );
   }
 
   /**

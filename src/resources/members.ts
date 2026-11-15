@@ -35,20 +35,24 @@ export class Members {
     params?: MemberListParams,
     options?: RequestOptions,
   ): PagePromise<MemberListItem> {
-    return requestPage<MemberListItem>(this.#requester, {
-      method: "GET",
-      path: "/members",
-      organizationScoped: true,
-      retrySafe: true,
-      idempotencyKey: "none",
-      query: {
-        limit: params?.limit,
-        cursor: params?.cursor,
-        include: params?.include,
-        role: params?.role,
+    return requestPage<MemberListItem>(
+      this.#requester,
+      {
+        method: "GET",
+        path: "/members",
+        organizationScoped: true,
+        retrySafe: true,
+        idempotencyKey: "none",
+        query: {
+          limit: params?.limit,
+          cursor: params?.cursor,
+          include: params?.include,
+          role: params?.role,
+        },
+        options,
       },
-      options,
-    });
+      { style: "cursor", cursorParam: "cursor" },
+    );
   }
 
   /**

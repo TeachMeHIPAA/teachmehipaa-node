@@ -85,6 +85,8 @@ export interface RequesterSettings {
 /** Sends API requests with auth, the Organization binding and error mapping. */
 export interface Requester {
   request<T extends object>(spec: RequestSpec): Promise<WithLastResponse<T>>;
+  /** The client's clock, for hand-written methods that wait between calls. */
+  readonly clock: Clock;
 }
 
 /** A call with its path resolved and its per-call values fixed. */
@@ -343,6 +345,7 @@ export const createRequester = (settings: RequesterSettings): Requester => {
   }, settings.organizationId);
 
   return {
+    clock,
     async request<T extends object>(
       spec: RequestSpec,
     ): Promise<WithLastResponse<T>> {

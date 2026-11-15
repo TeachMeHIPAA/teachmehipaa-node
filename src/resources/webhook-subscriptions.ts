@@ -80,15 +80,19 @@ export class WebhookSubscriptions {
     params?: WebhookSubscriptionListParams,
     options?: RequestOptions,
   ): PagePromise<WebhookSubscription> {
-    return requestPage<WebhookSubscription>(this.#requester, {
-      method: "GET",
-      path: "/webhook-subscriptions",
-      organizationScoped: true,
-      retrySafe: true,
-      idempotencyKey: "none",
-      query: { limit: params?.limit, cursor: params?.cursor },
-      options,
-    });
+    return requestPage<WebhookSubscription>(
+      this.#requester,
+      {
+        method: "GET",
+        path: "/webhook-subscriptions",
+        organizationScoped: true,
+        retrySafe: true,
+        idempotencyKey: "none",
+        query: { limit: params?.limit, cursor: params?.cursor },
+        options,
+      },
+      { style: "cursor", cursorParam: "cursor" },
+    );
   }
 
   /**

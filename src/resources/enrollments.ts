@@ -219,22 +219,26 @@ export class Enrollments {
     params?: EnrollmentListParams,
     options?: RequestOptions,
   ): PagePromise<OrgEnrollmentListItem> {
-    return requestPage<OrgEnrollmentListItem>(this.#requester, {
-      method: "GET",
-      path: "/enrollments",
-      organizationScoped: true,
-      retrySafe: true,
-      idempotencyKey: "none",
-      query: {
-        limit: params?.limit,
-        cursor: params?.cursor,
-        status: params?.status,
-        courseId: params?.courseId,
-        archived: params?.archived,
-        include: params?.include,
+    return requestPage<OrgEnrollmentListItem>(
+      this.#requester,
+      {
+        method: "GET",
+        path: "/enrollments",
+        organizationScoped: true,
+        retrySafe: true,
+        idempotencyKey: "none",
+        query: {
+          limit: params?.limit,
+          cursor: params?.cursor,
+          status: params?.status,
+          courseId: params?.courseId,
+          archived: params?.archived,
+          include: params?.include,
+        },
+        options,
       },
-      options,
-    });
+      { style: "cursor", cursorParam: "cursor" },
+    );
   }
 
   /**

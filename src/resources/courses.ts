@@ -29,15 +29,19 @@ export class Courses {
     params?: CourseListParams,
     options?: RequestOptions,
   ): PagePromise<Course> {
-    return requestPage<Course>(this.#requester, {
-      method: "GET",
-      path: "/courses",
-      organizationScoped: false,
-      retrySafe: true,
-      idempotencyKey: "none",
-      query: { limit: params?.limit, cursor: params?.cursor },
-      options,
-    });
+    return requestPage<Course>(
+      this.#requester,
+      {
+        method: "GET",
+        path: "/courses",
+        organizationScoped: false,
+        retrySafe: true,
+        idempotencyKey: "none",
+        query: { limit: params?.limit, cursor: params?.cursor },
+        options,
+      },
+      { style: "cursor", cursorParam: "cursor" },
+    );
   }
 
   /**

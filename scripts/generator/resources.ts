@@ -33,6 +33,24 @@ const ORGANIZATION_PREFIX = "/organizations/{orgId}";
 
 const JSON_CONTENT_TYPE = "application/json";
 
+/**
+ * Resources with hand-written methods, by IR path. The generator names their
+ * class `<Name>Base`; `src/extensions/<file>.ts` extends it under the plain
+ * name, and the client exposes that subclass.
+ */
+export const EXTENDED_RESOURCES: ReadonlySet<string> = new Set(["events"]);
+
+const isExtended = (path: readonly string[]): boolean =>
+  EXTENDED_RESOURCES.has(path.join("."));
+
+/** The class the client exposes, as imported from inside `src/resources/`. */
+const exposedClass = (
+  path: readonly string[],
+): { readonly className: string; readonly specifier: string } => ({
+  className: resourceClassName(path),
+  specifier: `${isExtended(path) ? "../extensions" : "."}/${resourceFileName(path)}.js`,
+});
+
 /** The request-body constraints under one property path, as a tree. */
 interface ConstraintNode {
   readonly fixed?: { readonly value: string | number | boolean | null };
@@ -356,16 +374,22 @@ const methodSource = (
 
   const withLastResponse = (type: string) =>
     `Promise<${imports.core("response", "WithLastResponse")}<${type}>>`;
-  const { returnType, call } = ((): { returnType: string; call: string } => {
+  const { returnType, call, trailing } = ((): {
+    returnType: string;
+    call: string;
+    trailing?: string;
+  } => {
     switch (response.kind) {
       case "page": {
         if (method.pagination === null) {
           throw new Error(`${where}: a page response needs pagination`);
         }
-        const item = renderType(method.pagination.itemType, imports);
+        const { style, cursorParam, itemType } = method.pagination;
+        const item = renderType(itemType, imports);
         return {
           returnType: `${imports.core("pagination", "PagePromise")}<${item}>`,
           call: `${imports.coreValue("pagination", "requestPage")}<${item}>(this.#requester, `,
+          trailing: `, { style: ${literal(style)}, cursorParam: ${literal(cursorParam)} }`,
         };
       }
       case "empty":
@@ -395,7 +419,7 @@ const methodSource = (
   const destructuring = destructure
     ? `const { ${method.queryParams.map((param) => param.name).join(", ")}, ...body }${paramsRequired ? " = params" : `: ${typeName} = params ?? {}`};\n`
     : "";
-  const source = `${docComment([method.summary, method.description])}${method.name}(${signature}): ${returnType} {\n${destructuring}return ${call}{\n${spec}\n});\n}\n`;
+  const source = `${docComment([method.summary, method.description])}${method.name}(${signature}): ${returnType} {\n${destructuring}return ${call}{\n${spec}\n}${trailing ?? ""});\n}\n`;
   return {
     params,
     method: source,
@@ -452,7 +476,7 @@ const resourceSource = (
   node: ResourceNode,
 ): { source: string; exports: readonly string[] } => {
   const imports = new Imports();
-  const className = resourceClassName(node.path);
+  const className = `${resourceClassName(node.path)}${isExtended(node.path) ? "Base" : ""}`;
   const resource: IrResource = { path: node.path, methods: node.methods };
   const methods = node.methods.map((method) =>
     methodSource(context, resource, method, imports),
@@ -460,8 +484,7 @@ const resourceSource = (
   const requester = imports.core("requester", "Requester");
   const children = node.children.map((child) => ({
     property: child.path.at(-1) ?? "",
-    className: resourceClassName(child.path),
-    file: resourceFileName(child.path),
+    ...exposedClass(child.path),
   }));
   const fields = [
     ...(methods.length === 0 ? [] : [`readonly #requester: ${requester};`]),
@@ -476,13 +499,18 @@ const resourceSource = (
     ),
   ];
   const childImports = children.map(
-    (child) => `import { ${child.className} } from "./${child.file}.js";`,
+    (child) => `import { ${child.className} } from "${child.specifier}";`,
   );
   const importLines = [
     imports.render((name) => `../models/${modelFileName(name)}.js`, "../core"),
     ...childImports,
   ].join("\n");
-  const source = `${BANNER}\n${importLines}\n\n${methods.map((method) => method.params).join("\n")}\nexport class ${className} {\n${fields.join("\n")}\n\nconstructor(requester: ${requester}) {\n${assignments.join("\n")}\n}\n\n${methods.map((method) => method.method).join("\n")}}\n`;
+  const classDoc = isExtended(node.path)
+    ? docComment([
+        `The generated methods of \`${node.path.join(".")}\`. The client exposes the hand-written subclass in \`src/extensions/${resourceFileName(node.path)}.ts\`.`,
+      ])
+    : "";
+  const source = `${BANNER}\n${importLines}\n\n${methods.map((method) => method.params).join("\n")}\n${classDoc}export class ${className} {\n${fields.join("\n")}\n\nconstructor(requester: ${requester}) {\n${assignments.join("\n")}\n}\n\n${methods.map((method) => method.method).join("\n")}}\n`;
   return {
     source,
     // The classes stay internal: a type-only re-export of a class still
@@ -494,11 +522,10 @@ const resourceSource = (
 const apiResourcesSource = (roots: readonly ResourceNode[]): string => {
   const entries = roots.map((root) => ({
     property: root.path[0] ?? "",
-    className: resourceClassName(root.path),
-    file: resourceFileName(root.path),
+    ...exposedClass(root.path),
   }));
   const imports = entries
-    .map((entry) => `import { ${entry.className} } from "./${entry.file}.js";`)
+    .map((entry) => `import { ${entry.className} } from "${entry.specifier}";`)
     .join("\n");
   return `${BANNER}
 import type { Requester } from "../core/requester.js";
@@ -522,6 +549,12 @@ ${entries.map((entry) => `this.${entry.property} = new ${entry.className}(reques
 export const generateResources = (ir: Ir): ReadonlyMap<string, string> => {
   const context = new Context(ir);
   const roots = resourceTree(ir.resources);
+  const paths = new Set(flatten(roots).map((node) => node.path.join(".")));
+  EXTENDED_RESOURCES.forEach((path) => {
+    if (!paths.has(path)) {
+      throw new Error(`Extended resource "${path}" is not in the IR`);
+    }
+  });
   const files = new Map<string, string>();
   const exports: string[] = [];
   flatten(roots).forEach((node) => {

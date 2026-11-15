@@ -15,7 +15,8 @@ export interface EventListParams {
   readonly type?: EventType;
 }
 
-export class Events {
+/** The generated methods of `events`. The client exposes the hand-written subclass in `src/extensions/events.ts`. */
+export class EventsBase {
   readonly #requester: Requester;
 
   constructor(requester: Requester) {
@@ -28,14 +29,22 @@ export class Events {
    * Returns a list of the organization's events from the last 30 days, oldest first. Pass the last `eventId` you processed as `after` to resume where you stopped, and `type` to list one event type.
    */
   list(params?: EventListParams, options?: RequestOptions): PagePromise<Event> {
-    return requestPage<Event>(this.#requester, {
-      method: "GET",
-      path: "/events",
-      organizationScoped: true,
-      retrySafe: true,
-      idempotencyKey: "none",
-      query: { limit: params?.limit, after: params?.after, type: params?.type },
-      options,
-    });
+    return requestPage<Event>(
+      this.#requester,
+      {
+        method: "GET",
+        path: "/events",
+        organizationScoped: true,
+        retrySafe: true,
+        idempotencyKey: "none",
+        query: {
+          limit: params?.limit,
+          after: params?.after,
+          type: params?.type,
+        },
+        options,
+      },
+      { style: "after", cursorParam: "after" },
+    );
   }
 }

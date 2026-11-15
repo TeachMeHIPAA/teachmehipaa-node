@@ -38,6 +38,7 @@ export type {
   WithLastResponse,
 } from "./core/response.js";
 export type { Page, PagePromise } from "./core/pagination.js";
+export type { EventTail, EventTailParams } from "./extensions/events.js";
 export type { Uploadable } from "./core/uploads.js";
 export type * from "./models/index.js";
 export type * from "./resources/index.js";

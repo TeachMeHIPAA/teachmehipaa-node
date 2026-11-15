@@ -7,7 +7,7 @@ import { Certificates } from "./certificates.js";
 import { Compliance } from "./compliance.js";
 import { Courses } from "./courses.js";
 import { Enrollments } from "./enrollments.js";
-import { Events } from "./events.js";
+import { Events } from "../extensions/events.js";
 import { Learners } from "./learners.js";
 import { Members } from "./members.js";
 import { Operations } from "./operations.js";

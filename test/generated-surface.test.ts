@@ -77,6 +77,12 @@ const EXPECTED_METHODS: Readonly<Record<string, readonly string[]>> = {
 /** The token endpoint is implemented by the core's token providers. */
 const HAND_WRITTEN_OPERATIONS = ["createAccessToken"];
 
+/**
+ * Public methods with no operation of their own, from `src/extensions/`:
+ * `events.tail` iterates `listOrgEvents` (grilling Q22).
+ */
+const HAND_WRITTEN_METHODS = ["events.tail"];
+
 const HTTP_METHODS = ["get", "post", "put", "patch", "delete"];
 
 const specOperationIds = (): readonly string[] => {
@@ -109,21 +115,26 @@ const irMethods = (): readonly { name: string; operationId: string }[] => {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
+/** Method names on a prototype and the prototypes it extends. */
+const prototypeMethods = (prototype: unknown): string[] =>
+  isRecord(prototype) && prototype !== Object.prototype
+    ? [
+        ...Object.getOwnPropertyNames(prototype).filter(
+          (name) =>
+            name !== "constructor" &&
+            typeof Reflect.get(prototype, name) === "function",
+        ),
+        ...prototypeMethods(Object.getPrototypeOf(prototype)),
+      ]
+    : [];
+
 /** Every callable reachable from the client, as `resource.method` paths. */
 const publicMethods = (target: object, prefix: string): string[] => {
   const ownProperties = Object.keys(target).flatMap((key) => {
     const value: unknown = Reflect.get(target, key);
     return isRecord(value) ? publicMethods(value, `${prefix}${key}.`) : [];
   });
-  const prototype: unknown = Object.getPrototypeOf(target);
-  const methods =
-    isRecord(prototype) && prototype !== Object.prototype
-      ? Object.getOwnPropertyNames(prototype).filter(
-          (name) =>
-            name !== "constructor" &&
-            typeof Reflect.get(prototype, name) === "function",
-        )
-      : [];
+  const methods = prototypeMethods(Object.getPrototypeOf(target));
   return [...ownProperties, ...methods.map((name) => `${prefix}${name}`)];
 };
 
@@ -161,11 +172,13 @@ describe("Generated surface", () => {
     expect([...covered].sort()).toEqual(Object.keys(EXPECTED_METHODS).sort());
   });
 
-  it("exposes exactly one public method per IR method, with the expected name", () => {
-    const expected = Object.values(EXPECTED_METHODS).flat().sort();
+  it("exposes exactly one public method per IR method, with the expected name, plus the hand-written ones", () => {
+    const expected = Object.values(EXPECTED_METHODS).flat();
 
     expect(expected).toHaveLength(57);
-    expect(publicMethods(client, "").sort()).toEqual(expected);
+    expect(publicMethods(client, "").sort()).toEqual(
+      [...expected, ...HAND_WRITTEN_METHODS].sort(),
+    );
   });
 
   it("names each IR method as its operation's expected public method", () => {

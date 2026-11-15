@@ -59,15 +59,19 @@ export class SeatOrders {
     params?: SeatOrderListParams,
     options?: RequestOptions,
   ): PagePromise<SeatOrder> {
-    return requestPage<SeatOrder>(this.#requester, {
-      method: "GET",
-      path: "/seat-orders",
-      organizationScoped: true,
-      retrySafe: true,
-      idempotencyKey: "none",
-      query: { limit: params?.limit, cursor: params?.cursor },
-      options,
-    });
+    return requestPage<SeatOrder>(
+      this.#requester,
+      {
+        method: "GET",
+        path: "/seat-orders",
+        organizationScoped: true,
+        retrySafe: true,
+        idempotencyKey: "none",
+        query: { limit: params?.limit, cursor: params?.cursor },
+        options,
+      },
+      { style: "cursor", cursorParam: "cursor" },
+    );
   }
 
   /**

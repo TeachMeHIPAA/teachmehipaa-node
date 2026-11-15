@@ -57,15 +57,19 @@ export class PartnerOrganizations {
     params?: PartnerOrganizationListParams,
     options?: RequestOptions,
   ): PagePromise<PartnerOrganization> {
-    return requestPage<PartnerOrganization>(this.#requester, {
-      method: "GET",
-      path: "/partners/{partnerId}/organizations",
-      pathParams: { partnerId },
-      organizationScoped: false,
-      retrySafe: true,
-      idempotencyKey: "none",
-      query: { limit: params?.limit, cursor: params?.cursor },
-      options,
-    });
+    return requestPage<PartnerOrganization>(
+      this.#requester,
+      {
+        method: "GET",
+        path: "/partners/{partnerId}/organizations",
+        pathParams: { partnerId },
+        organizationScoped: false,
+        retrySafe: true,
+        idempotencyKey: "none",
+        query: { limit: params?.limit, cursor: params?.cursor },
+        options,
+      },
+      { style: "cursor", cursorParam: "cursor" },
+    );
   }
 }

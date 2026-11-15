@@ -78,19 +78,23 @@ export class Certificates {
     params?: CertificateListParams,
     options?: RequestOptions,
   ): PagePromise<Certificate> {
-    return requestPage<Certificate>(this.#requester, {
-      method: "GET",
-      path: "/certificates",
-      organizationScoped: true,
-      retrySafe: true,
-      idempotencyKey: "none",
-      query: {
-        limit: params?.limit,
-        cursor: params?.cursor,
-        subjectId: params?.subjectId,
+    return requestPage<Certificate>(
+      this.#requester,
+      {
+        method: "GET",
+        path: "/certificates",
+        organizationScoped: true,
+        retrySafe: true,
+        idempotencyKey: "none",
+        query: {
+          limit: params?.limit,
+          cursor: params?.cursor,
+          subjectId: params?.subjectId,
+        },
+        options,
       },
-      options,
-    });
+      { style: "cursor", cursorParam: "cursor" },
+    );
   }
 
   /**

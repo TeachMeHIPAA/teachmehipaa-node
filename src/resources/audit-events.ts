@@ -48,22 +48,26 @@ export class AuditEvents {
     params?: AuditEventListParams,
     options?: RequestOptions,
   ): PagePromise<AuditEvent> {
-    return requestPage<AuditEvent>(this.#requester, {
-      method: "GET",
-      path: "/audit-events",
-      organizationScoped: true,
-      retrySafe: true,
-      idempotencyKey: "none",
-      query: {
-        limit: params?.limit,
-        cursor: params?.cursor,
-        type: params?.type,
-        transition: params?.transition,
-        subjectId: params?.subjectId,
-        since: params?.since,
-        until: params?.until,
+    return requestPage<AuditEvent>(
+      this.#requester,
+      {
+        method: "GET",
+        path: "/audit-events",
+        organizationScoped: true,
+        retrySafe: true,
+        idempotencyKey: "none",
+        query: {
+          limit: params?.limit,
+          cursor: params?.cursor,
+          type: params?.type,
+          transition: params?.transition,
+          subjectId: params?.subjectId,
+          since: params?.since,
+          until: params?.until,
+        },
+        options,
       },
-      options,
-    });
+      { style: "cursor", cursorParam: "cursor" },
+    );
   }
 }
