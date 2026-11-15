@@ -14,6 +14,7 @@ ETags, Operations and webhook verification, so your code only calls methods.
 - [Installation](#installation)
 - [Quickstart](#quickstart)
 - [The Organization binding](#the-organization-binding)
+- [Public lookups without credentials](#public-lookups-without-credentials)
 - [Creating Learners](#creating-learners)
 - [Pagination](#pagination)
 - [Errors](#errors)
@@ -103,8 +104,28 @@ A client's configuration is fixed when you create it. To act for another
 Organization, create another client. Partner-level calls (`partners.*`) are
 not Organization-scoped and take the `partnerId` as their first argument.
 
+## Public lookups without credentials
+
 Public methods, `courses.list`, `courses.retrieve` and
-`certificateVerifications.retrieve`, send no Access token at all.
+`certificateVerifications.retrieve`, send no Access token at all. To call
+only those, such as to check a Certificate someone showed you, create a
+client without credentials:
+
+```ts sample=public-lookups
+import TeachMeHipaa from "teachmehipaa";
+
+const client = new TeachMeHipaa({ environment: "sandbox" });
+
+const verification = await client.certificateVerifications.retrieve("aB3dE9");
+console.log(verification.status, verification.learnerName);
+
+const courses = await client.courses.list();
+console.log(courses.items.map((course) => course.title));
+```
+
+Any other method on such a client rejects with a `TypeError` before it sends
+anything. Pass `clientId` and `clientSecret`, or a `tokenProvider`, to call
+them.
 
 ## Creating Learners
 
@@ -597,7 +618,7 @@ console.log(typeof client.learners.list);
 
 | Option           | Default                               | Description                                                                        |
 | ---------------- | ------------------------------------- | ---------------------------------------------------------------------------------- |
-| `clientId`       | (required, or `tokenProvider`)        | Your API client's id (`cli_…`), or a Partner app's (`app_…`)                       |
+| `clientId`       | None: public methods only             | Your API client's id (`cli_…`), or a Partner app's (`app_…`)                       |
 | `clientSecret`   | (required with `clientId`)            | The matching secret (`tmh_cs_…` or `tmh_as_…`)                                     |
 | `scopes`         | Every Scope the API client holds      | Narrows the Access token's Scopes                                                  |
 | `tokenProvider`  | Client credentials                    | Supplies Access tokens instead: `partnerGrantTokenProvider`, `staticTokenProvider` |

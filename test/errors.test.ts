@@ -315,7 +315,10 @@ describe("Usage errors", () => {
     } as never);
 
   it.each<[string, () => unknown]>([
-    ["the client constructor", () => new TeachMeHipaa({} as never)],
+    [
+      "the client constructor",
+      () => new TeachMeHipaa({ clientId: "cli_x" } as never),
+    ],
     ["partnerGrantTokenProvider", partnerGrantWithoutStore],
     ["staticTokenProvider", () => staticTokenProvider("")],
     [

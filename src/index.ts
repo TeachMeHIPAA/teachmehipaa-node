@@ -35,6 +35,7 @@ export type {
 export type {
   ClientCredentialsOptions,
   Environment,
+  PublicClientOptions,
   TokenEndpointOptions,
   TokenProviderOptions,
 } from "./core/config.js";

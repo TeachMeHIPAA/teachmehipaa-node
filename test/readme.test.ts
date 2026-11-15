@@ -313,6 +313,32 @@ describe("README samples, run against a fake transport", () => {
     expect(logged).toEqual([["req_compliance"]]);
   });
 
+  runs("public-lookups", async () => {
+    const fake = createFakeTransport()
+      .script("GET /v1/certificate-verifications/aB3dE9", {
+        json: {
+          status: "valid",
+          learnerName: "Ana Example",
+          courseTitle: "HIPAA Training 2026",
+          issuedAt: "2026-11-02T10:30:00.000Z",
+          expiresAt: "2027-11-02T10:30:00.000Z",
+          issuer: "TeachMeHIPAA",
+        },
+      })
+      .script("GET /v1/courses", page([{ title: "HIPAA Training 2026" }]));
+
+    await runSample("public-lookups", fake);
+
+    expect(logged).toEqual([
+      ["valid", "Ana Example"],
+      [["HIPAA Training 2026"]],
+    ]);
+    expect(fake.requestsTo(TOKEN_ROUTE)).toEqual([]);
+    fake.requests.forEach((request) => {
+      expect(request.headers).not.toHaveProperty("authorization");
+    });
+  });
+
   runs("learner-writes", async () => {
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, tokenReply())

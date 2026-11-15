@@ -92,7 +92,8 @@ export interface RequesterSettings {
   readonly baseUrl: string;
   readonly userAgent: string;
   readonly transport: Transport;
-  readonly tokenProvider: TokenProvider;
+  /** Absent for a client without credentials, which calls only public methods. */
+  readonly tokenProvider: TokenProvider | undefined;
   readonly timeout: number;
   readonly maxRetries: number;
   readonly organizationId: string | undefined;
@@ -115,7 +116,8 @@ interface PreparedCall {
   readonly timeout: number;
   readonly maxRetries: number;
   readonly retrySafe: boolean;
-  readonly authenticated: boolean;
+  /** Where the call's Access tokens come from; `null` for a public method. */
+  readonly tokenProvider: TokenProvider | null;
   readonly expected: ExpectedResponse;
   /** The call sent `If-None-Match`, so a 304 is a success. */
   readonly conditionalRead: boolean;
@@ -324,13 +326,13 @@ export const createRequester = (settings: RequesterSettings): Requester => {
   const send = <T extends object>(
     call: PreparedCall,
   ): Promise<WithLastResponse<T>> => {
-    const { tokenProvider } = settings;
+    const { tokenProvider } = call;
     let replayed = false;
     // A token revoked mid-flight gets one re-mint and replay per call. It
     // happens inside an attempt, so it never uses up a retry, and a 401 comes
     // before the API acts, so replaying even a PATCH is safe.
     const attempt = async (): Promise<Attempt<WithLastResponse<T>>> => {
-      if (!call.authenticated) {
+      if (tokenProvider === null) {
         return exchange<T>(call, null);
       }
       const accessToken = await tokenProvider.getAccessToken();
@@ -361,6 +363,7 @@ export const createRequester = (settings: RequesterSettings): Requester => {
     spec: RequestSpec,
     path: string,
     body: string | FormData | undefined,
+    tokenProvider: TokenProvider | null,
   ): PreparedCall => {
     const options = spec.options ?? {};
     const idempotencyKey =
@@ -400,25 +403,42 @@ export const createRequester = (settings: RequesterSettings): Requester => {
       timeout: options.timeout ?? settings.timeout,
       maxRetries: options.maxRetries ?? settings.maxRetries,
       retrySafe: spec.retrySafe,
-      authenticated: spec.authenticated,
+      tokenProvider,
       expected,
       conditionalRead: spec.ifNoneMatch !== undefined,
     };
   };
 
+  // A public client can still make public calls, so a missing credential
+  // fails the call that needs one, before anything is sent.
+  const tokenProviderFor = (spec: RequestSpec): TokenProvider | null => {
+    if (!spec.authenticated) {
+      return null;
+    }
+    if (settings.tokenProvider === undefined) {
+      throw usageError(
+        `${spec.method} ${spec.path} needs credentials, and this client has none; pass clientId and clientSecret, or a tokenProvider, when you create the client`,
+      );
+    }
+    return settings.tokenProvider;
+  };
+
+  const introspectionSpec: RequestSpec = {
+    method: "GET",
+    path: "/auth/introspection",
+    organizationScoped: false,
+    authenticated: true,
+    retrySafe: true,
+    idempotencyKey: "none",
+  };
+
   const organization = createOrganizationBinding(async () => {
     const introspection = await send<{ readonly orgId?: unknown }>(
       prepare(
-        {
-          method: "GET",
-          path: "/auth/introspection",
-          organizationScoped: false,
-          authenticated: true,
-          retrySafe: true,
-          idempotencyKey: "none",
-        },
+        introspectionSpec,
         "/auth/introspection",
         undefined,
+        tokenProviderFor(introspectionSpec),
       ),
     );
     if (typeof introspection.orgId === "string" && introspection.orgId !== "") {
@@ -441,11 +461,15 @@ export const createRequester = (settings: RequesterSettings): Requester => {
     async request<T extends object>(
       spec: RequestSpec,
     ): Promise<WithLastResponse<T>> {
+      // Checked before the Organization lookup, which needs a token too.
+      const tokenProvider = tokenProviderFor(spec);
       const relative = expandPath(spec.path, spec.pathParams ?? {});
       const path = spec.organizationScoped
         ? `/organizations/${encodeURIComponent(await organization.organizationId())}${relative}`
         : relative;
-      return send<T>(prepare(spec, path, await encodeBody(spec)));
+      return send<T>(
+        prepare(spec, path, await encodeBody(spec), tokenProvider),
+      );
     },
   };
 };

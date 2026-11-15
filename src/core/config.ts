@@ -79,7 +79,20 @@ export interface TokenProviderOptions extends SharedClientOptions {
   readonly scopes?: never;
 }
 
-export type ClientOptions = ClientCredentialsOptions | TokenProviderOptions;
+/**
+ * No credentials: only public methods (`courses.*`,
+ * `certificateVerifications.retrieve`) work, and any other call fails before
+ * it sends anything.
+ */
+export interface PublicClientOptions extends SharedClientOptions {
+  readonly clientId?: never;
+  readonly clientSecret?: never;
+  readonly scopes?: never;
+  readonly tokenProvider?: never;
+}
+
+export type ClientOptions =
+  ClientCredentialsOptions | TokenProviderOptions | PublicClientOptions;
 
 /** How the client gets Access tokens. */
 export type ResolvedAuth =
@@ -89,7 +102,8 @@ export type ResolvedAuth =
       readonly clientSecret: string;
       readonly scopes: readonly string[] | undefined;
     }
-  | { readonly kind: "tokenProvider"; readonly tokenProvider: TokenProvider };
+  | { readonly kind: "tokenProvider"; readonly tokenProvider: TokenProvider }
+  | { readonly kind: "none" };
 
 export interface ResolvedConfig {
   readonly auth: ResolvedAuth;
@@ -247,6 +261,17 @@ const resolveTokenProvider = (value: unknown): TokenProvider => {
 };
 
 const resolveAuth = (options: ClientOptions): ResolvedAuth => {
+  // Only a caller who gave no credential at all gets a public client; half a
+  // pair is a mistake, so it still fails here.
+  const credentials = [
+    options.tokenProvider,
+    options.clientId,
+    options.clientSecret,
+    options.scopes,
+  ];
+  if (credentials.every((value) => value === undefined)) {
+    return { kind: "none" };
+  }
   if (options.tokenProvider === undefined) {
     return {
       kind: "clientCredentials",

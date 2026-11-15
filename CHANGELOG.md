@@ -21,6 +21,10 @@ Generated from the Developer API document release `waggish-wombat`.
 - Live and Sandbox Environments, a `baseUrl` override, narrower `scopes`, and
   `staticTokenProvider` for Access tokens obtained elsewhere. Public
   methods (`courses.*`, `certificateVerifications.retrieve`) send no token.
+- A client without credentials, `new TeachMeHipaa({ environment: "sandbox" })`,
+  for public lookups such as Certificate verification. Any other call rejects
+  with a `TypeError` before sending a request; giving only one of `clientId`
+  and `clientSecret` still fails at construction.
 - The Organization binding: discovered once through `auth.introspect`, or
   given as `organizationId`.
 - Typed errors by status (`InvalidRequestError`, `AuthenticationError`,
