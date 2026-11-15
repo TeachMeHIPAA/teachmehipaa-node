@@ -6,6 +6,7 @@ import {
   type FakeTransport,
   type ScriptStep,
   type ScriptedReply,
+  textBody,
 } from "./support/fake-transport.js";
 import {
   CLIENT_ID,
@@ -70,7 +71,7 @@ describe("Idempotency keys and request bodies", () => {
     const [request] = fake.requestsTo(CREATE_ROUTE);
     expect(request?.headers["content-type"]).toBe("application/json");
     expect(request?.headers["idempotency-key"]).toMatch(UUID_V4);
-    expect(JSON.parse(request?.body ?? "")).toEqual({
+    expect(JSON.parse(textBody(request))).toEqual({
       email: "ana@example.com",
       externalId: "hr-123",
     });

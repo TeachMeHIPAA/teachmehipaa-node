@@ -1,60 +1,41 @@
-/**
- * A Learner's training status. Known values are listed; new ones may appear
- * without notice (ADR-0006).
- */
-export type LearnerStatus =
-  | "not_started"
-  | "invite_bounced"
-  | "in_progress"
-  | "compliant"
-  | "expiring_soon"
-  | "expired"
-  | "removed"
-  | (string & {});
+// Generated from openapi/sdk-ir.json — do not edit. Run `npm run generate`.
+import type { LearnerCertificate } from "./learner-certificate.js";
+import type { LearnerCourse } from "./learner-course.js";
+import type { LearnerStatus } from "./learner-status.js";
 
-export interface LearnerCourse {
-  readonly courseId: string;
-  readonly title: string;
-}
-
-export interface LearnerCertificate {
-  readonly certificateId: string;
-  /** ISO 8601. */
-  readonly issuedAt: string;
-  /** ISO 8601. */
-  readonly expiresAt: string;
-  readonly verifyUrl: string | null;
-  readonly pdfUrl: string;
-}
-
-/** A Member taking a Course, seen from the Organization's side. */
 export interface Learner {
-  /** The Learner's id, the same as the Member's `subjectId` (`sub_…`). */
+  /** Unique identifier for the learner. The same as the member's `subjectId`. */
   readonly learnerId: string;
+  /** The learner's email address. */
   readonly email: string;
+  /** The learner's full name. */
   readonly name: string | null;
-  /** Your own id for the Learner, unique within the Organization. */
+  /** Your own id for the learner, unique within the organization. */
   readonly externalId: string | null;
-  /** The Learner's training status in this Course. */
+  /** The learner's training status in this course. One of `not_started` (invited), `invite_bounced`, `in_progress`, `compliant`, `expiring_soon` (within 60 days of expiry), `expired` or `removed`. */
   readonly status: LearnerStatus;
-  /** The Course this Learner record is for. */
+  /** The course this learner record is for. */
   readonly course: LearnerCourse;
-  /** ISO 8601. */
+  /** When the learner was invited (ISO 8601). */
   readonly invitedAt: string | null;
-  /** ISO 8601. */
+  /**
+   * When the learner started training.
+   *
+   * An ISO 8601 date-time string.
+   */
   readonly startedAt: string | null;
-  /** ISO 8601. */
+  /**
+   * When the learner completed the course.
+   *
+   * An ISO 8601 date-time string.
+   */
   readonly completedAt: string | null;
-  /** ISO 8601. */
+  /**
+   * When the learner's training is due.
+   *
+   * An ISO 8601 date-time string.
+   */
   readonly dueAt: string | null;
-  /** The Learner's current Certificate, with its verification and PDF links. */
+  /** The learner's current certificate, with its verification and PDF links. */
   readonly certificate: LearnerCertificate | null;
-}
-
-/** A one-time URL that signs a Learner straight into their Training. */
-export interface LearnerLaunchLink {
-  /** Single-use; redirect the Learner to it right away. */
-  readonly url: string;
-  /** ISO 8601; 5 minutes after it was created. */
-  readonly expiresAt: string;
 }

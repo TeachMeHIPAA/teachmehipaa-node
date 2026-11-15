@@ -13,6 +13,20 @@ export type WithLastResponse<T> = T & {
   readonly lastResponse: ResponseMetadata;
 };
 
+/** A response with no body, such as a delete's 204. */
+export interface EmptyResponse {
+  readonly lastResponse: ResponseMetadata;
+}
+
+/** A file the API sent, such as a Certificate PDF. */
+export interface BinaryResponse {
+  readonly data: Uint8Array;
+  /** The `Content-Type`, e.g. `application/pdf`. */
+  readonly contentType: string | null;
+  /** The file name from `Content-Disposition`, when the API gives one. */
+  readonly filename: string | null;
+}
+
 export const headersToRecord = (
   headers: Headers,
 ): Readonly<Record<string, string>> => Object.fromEntries(headers.entries());

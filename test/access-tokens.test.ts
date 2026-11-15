@@ -4,6 +4,7 @@ import { createFakeClock } from "./support/fake-clock.js";
 import {
   createFakeTransport,
   type ScriptedReply,
+  textBody,
 } from "./support/fake-transport.js";
 import {
   CLIENT_ID,
@@ -132,7 +133,7 @@ describe("Access tokens", () => {
 
     await client.learners.retrieve(LEARNER_ID);
 
-    const form = new URLSearchParams(fake.requestsTo(TOKEN_ROUTE)[0]?.body);
+    const form = new URLSearchParams(textBody(fake.requestsTo(TOKEN_ROUTE)[0]));
     expect([...form]).toEqual([
       ["grant_type", "client_credentials"],
       ["scope", "learners:write compliance:read"],

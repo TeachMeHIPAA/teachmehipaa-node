@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import TeachMeHipaa, { type TeachMeHipaaOptions } from "../src/index.js";
-import { createFakeTransport } from "./support/fake-transport.js";
+import { createFakeTransport, textBody } from "./support/fake-transport.js";
 import {
   CLIENT_ID,
   CLIENT_SECRET,
@@ -77,7 +77,7 @@ describe("Client configuration", () => {
     await client.learners.retrieve(LEARNER_ID);
 
     const [tokenRequest, retrieve] = fake.requests;
-    expect(new URLSearchParams(tokenRequest?.body).get("scope")).toBe(
+    expect(new URLSearchParams(textBody(tokenRequest)).get("scope")).toBe(
       "learners:read",
     );
     expect(tokenRequest?.headers.authorization).toBe(

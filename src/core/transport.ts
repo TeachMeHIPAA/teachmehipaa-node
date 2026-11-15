@@ -6,7 +6,8 @@ export interface TransportRequest {
   readonly url: string;
   /** Lower-case header names. */
   readonly headers: Readonly<Record<string, string>>;
-  readonly body?: string;
+  /** JSON or form text, or a multipart body. */
+  readonly body?: string | FormData;
   /** Milliseconds before the transport should abandon the request. */
   readonly timeout: number;
 }

@@ -5,6 +5,8 @@ export interface ScriptedReply {
   readonly headers?: Readonly<Record<string, string>>;
   readonly json?: unknown;
   readonly body?: string;
+  /** A binary body, such as a PDF. */
+  readonly bytes?: Uint8Array;
   /** Sends the headers, then fails the body stream with this error. */
   readonly bodyError?: Error;
 }
@@ -44,7 +46,7 @@ const toResponse = (reply: ScriptedReply): Response => {
         })
       : reply.json !== undefined
         ? JSON.stringify(reply.json)
-        : (reply.body ?? null);
+        : (reply.bytes ?? reply.body ?? null);
   return new Response(body, { status: reply.status ?? 200, headers });
 };
 
@@ -73,4 +75,13 @@ export const createFakeTransport = (): FakeTransport => {
     requestsTo: (route) => requests.filter((r) => routeOf(r) === route),
   };
   return fake;
+};
+
+/** A request's body as text; fails the test for a multipart body. */
+export const textBody = (request: TransportRequest | undefined): string => {
+  const body = request?.body;
+  if (typeof body !== "string") {
+    throw new Error("Expected a text request body");
+  }
+  return body;
 };

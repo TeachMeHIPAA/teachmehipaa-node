@@ -2,11 +2,17 @@ import { randomUUID } from "node:crypto";
 import type { Clock } from "./clock.js";
 import { TeachMeHipaaError } from "./errors.js";
 import { createOrganizationBinding } from "./organization.js";
-import { connectionError, errorFromResponse, readBody } from "./problem.js";
+import {
+  connectionError,
+  errorFromResponse,
+  readBody,
+  type ResponseBody,
+} from "./problem.js";
 import type { RequestOptions } from "./request-options.js";
 import {
   responseMetadata,
   withLastResponse,
+  type BinaryResponse,
   type WithLastResponse,
 } from "./response.js";
 import {
@@ -17,6 +23,7 @@ import {
 } from "./retry.js";
 import type { TokenProvider } from "./token-provider.js";
 import type { HttpMethod, Transport } from "./transport.js";
+import { multipartBody, type BinaryPart } from "./uploads.js";
 
 export type QueryParams = Readonly<
   Record<string, string | number | boolean | undefined>
@@ -41,15 +48,28 @@ export interface RequestSpec {
    */
   readonly idempotencyKey: "required" | "none";
   readonly query?: QueryParams | undefined;
-  /** Serialized as JSON. */
+  /** Serialized as JSON, or as multipart for `multipart/form-data`. */
   readonly body?: unknown;
   /** Defaults to `application/json` when there is a body. */
-  readonly contentType?: JsonContentType;
+  readonly contentType?: RequestContentType;
+  /** The body fields sent as files in a multipart body. */
+  readonly binaryParts?: readonly BinaryPart[];
+  /** What a success looks like. Defaults to a JSON object. */
+  readonly response?: ExpectedResponse;
   readonly options?: RequestOptions | undefined;
 }
 
-export type JsonContentType =
-  "application/json" | "application/merge-patch+json";
+export type RequestContentType =
+  "application/json" | "application/merge-patch+json" | "multipart/form-data";
+
+/** The IR's response kinds that change how a success is read. */
+export type ExpectedResponse =
+  | { readonly kind: "json" }
+  /** A Learner write: `created` is set from 201 (created) vs 200 (existing). */
+  | { readonly kind: "writeResult" }
+  /** No body (204); success is the status alone. */
+  | { readonly kind: "empty" }
+  | { readonly kind: "binary"; readonly contentType: string };
 
 export interface RequesterSettings {
   readonly baseUrl: string;
@@ -72,11 +92,82 @@ interface PreparedCall {
   readonly method: HttpMethod;
   readonly url: string;
   readonly headers: Readonly<Record<string, string>>;
-  readonly body: string | undefined;
+  readonly body: string | FormData | undefined;
   readonly timeout: number;
   readonly maxRetries: number;
   readonly retrySafe: boolean;
+  readonly expected: ExpectedResponse;
 }
+
+/** What arrived: the whole file for a binary success, else the parsed body. */
+type Payload =
+  | { readonly kind: "binary"; readonly data: Uint8Array }
+  | { readonly kind: "body"; readonly body: ResponseBody };
+
+const mediaType = (contentType: string | null): string | null =>
+  contentType?.split(";")[0]?.trim().toLowerCase() ?? null;
+
+// A binary success must carry the type the IR promises: unknown paths answer
+// 200 with an HTML page, which must not be handed back as a PDF.
+const isBinarySuccess = (
+  response: Response,
+  expected: ExpectedResponse,
+): boolean =>
+  response.ok &&
+  expected.kind === "binary" &&
+  mediaType(response.headers.get("content-type")) ===
+    expected.contentType.toLowerCase();
+
+const readPayload = async (
+  response: Response,
+  expected: ExpectedResponse,
+): Promise<Payload> =>
+  isBinarySuccess(response, expected)
+    ? { kind: "binary", data: new Uint8Array(await response.arrayBuffer()) }
+    : { kind: "body", body: await readBody(response) };
+
+// RFC 6266: prefer the UTF-8 `filename*`, else the plain `filename`.
+const filenameOf = (contentDisposition: string | null): string | null => {
+  const header = contentDisposition ?? "";
+  const encoded = /filename\*=UTF-8''([^;\s]+)/i.exec(header)?.[1];
+  if (encoded !== undefined) {
+    try {
+      return decodeURIComponent(encoded);
+    } catch {
+      // Malformed percent-encoding: use the plain parameter instead.
+    }
+  }
+  return /filename="?([^";]+)"?/i.exec(header)?.[1] ?? null;
+};
+
+const binaryValue = (response: Response, data: Uint8Array): BinaryResponse => ({
+  data,
+  contentType: response.headers.get("content-type"),
+  filename: filenameOf(response.headers.get("content-disposition")),
+});
+
+/** What a 2xx body resolves to, or `null` when the library can't use it. */
+const successValue = (
+  response: Response,
+  body: ResponseBody,
+  expected: ExpectedResponse,
+): object | null => {
+  switch (expected.kind) {
+    case "empty":
+      return {};
+    case "binary":
+      return null;
+    case "json":
+    case "writeResult": {
+      if (!body.json || typeof body.value !== "object" || body.value === null) {
+        return null;
+      }
+      return expected.kind === "writeResult"
+        ? { ...body.value, created: response.status === 201 }
+        : body.value;
+    }
+  }
+};
 
 const expandPath = (
   template: string,
@@ -119,26 +210,37 @@ export const createRequester = (settings: RequesterSettings): Requester => {
         ...(call.body === undefined ? {} : { body: call.body }),
         timeout: call.timeout,
       })
-      .then(async (response) => ({ response, body: await readBody(response) }))
+      .then(async (response) => ({
+        response,
+        payload: await readPayload(response, call.expected),
+      }))
       .catch((cause: unknown) => connectionError(cause, call.timeout));
     if (received instanceof TeachMeHipaaError) {
       return { ok: false, error: received };
     }
-    const { response, body } = received;
-    if (
-      !response.ok ||
-      !body.json ||
-      typeof body.value !== "object" ||
-      body.value === null
-    ) {
+    const { response, payload } = received;
+    const metadata = responseMetadata(response);
+    if (payload.kind === "binary") {
+      return {
+        ok: true,
+        value: withLastResponse(
+          binaryValue(response, payload.data) as T,
+          metadata,
+        ),
+      };
+    }
+    const value = response.ok
+      ? successValue(response, payload.body, call.expected)
+      : null;
+    if (value === null) {
       return {
         ok: false,
-        error: errorFromResponse(response, body, clock.now()),
+        error: errorFromResponse(response, payload.body, clock.now()),
       };
     }
     return {
       ok: true,
-      value: withLastResponse(body.value as T, responseMetadata(response)),
+      value: withLastResponse(value as T, metadata),
     };
   };
 
@@ -177,15 +279,18 @@ export const createRequester = (settings: RequesterSettings): Requester => {
     const idempotencyKey =
       options.idempotencyKey ??
       (spec.idempotencyKey === "required" ? randomUUID() : undefined);
+    const contentType = spec.contentType ?? "application/json";
+    const multipart = contentType === "multipart/form-data";
     return {
       method: spec.method,
       url: `${settings.baseUrl}${path}${queryString(spec.query)}`,
       headers: {
         accept: "application/json",
         "user-agent": settings.userAgent,
-        ...(spec.body === undefined
+        // fetch writes a multipart Content-Type itself, with the boundary.
+        ...(spec.body === undefined || multipart
           ? {}
-          : { "content-type": spec.contentType ?? "application/json" }),
+          : { "content-type": contentType }),
         ...(idempotencyKey === undefined
           ? {}
           : { "idempotency-key": idempotencyKey }),
@@ -193,10 +298,16 @@ export const createRequester = (settings: RequesterSettings): Requester => {
           ? {}
           : { "x-request-id": options.requestId }),
       },
-      body: spec.body === undefined ? undefined : JSON.stringify(spec.body),
+      body:
+        spec.body === undefined
+          ? undefined
+          : multipart
+            ? multipartBody(spec.body, spec.binaryParts ?? [])
+            : JSON.stringify(spec.body),
       timeout: options.timeout ?? settings.timeout,
       maxRetries: options.maxRetries ?? settings.maxRetries,
       retrySafe: spec.retrySafe,
+      expected: spec.response ?? { kind: "json" },
     };
   };
 
