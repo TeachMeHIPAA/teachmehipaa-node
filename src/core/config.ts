@@ -132,6 +132,8 @@ const optionalNonEmptyString = (
 ): string | undefined =>
   value === undefined ? undefined : requireNonEmptyString(value, name);
 
+const trimTrailingSlashes = (url: string): string => url.replace(/\/+$/, "");
+
 const resolveBaseUrl = (environment: unknown, baseUrl: unknown): string => {
   if (
     environment !== undefined &&
@@ -146,7 +148,7 @@ const resolveBaseUrl = (environment: unknown, baseUrl: unknown): string => {
   if (typeof baseUrl !== "string" || !URL.canParse(baseUrl)) {
     throw invalid("baseUrl must be an absolute URL");
   }
-  return baseUrl.replace(/\/+$/, "");
+  return trimTrailingSlashes(baseUrl);
 };
 
 const resolveScopes = (value: unknown): readonly string[] | undefined => {
@@ -272,6 +274,23 @@ const resolveAuth = (options: ClientOptions): ResolvedAuth => {
   };
 };
 
+// A Grant's Refresh token works only in its own Environment, and a provider
+// that refreshed against another one would hand the client tokens its API
+// refuses.
+const requireSameBaseUrl = (auth: ResolvedAuth, baseUrl: string): void => {
+  const providerBaseUrl =
+    auth.kind === "tokenProvider" ? auth.tokenProvider.baseUrl : undefined;
+  if (typeof providerBaseUrl !== "string") {
+    return;
+  }
+  const normalized = trimTrailingSlashes(providerBaseUrl);
+  if (normalized !== baseUrl) {
+    throw invalid(
+      `tokenProvider gets Access tokens from ${normalized}, but the client calls ${baseUrl}; give both the same environment and baseUrl`,
+    );
+  }
+};
+
 /** Settings for calling the token endpoint without a client. */
 export type TokenEndpointOptions = Pick<
   SharedClientOptions,
@@ -286,9 +305,10 @@ export type TokenEndpointOptions = Pick<
 
 export const resolveTokenEndpoint = (
   options: TokenEndpointOptions,
-): TokenEndpoint => {
+): TokenEndpoint & { readonly baseUrl: string } => {
   const baseUrl = resolveBaseUrl(options.environment, options.baseUrl);
   return Object.freeze({
+    baseUrl,
     tokenUrl: `${baseUrl}/auth/token`,
     userAgent: buildUserAgent(resolveAppInfo(options.appInfo)),
     transport: resolveTransport(options.fetch, options.transport),
@@ -306,9 +326,12 @@ export const resolveConfig = (options: ClientOptions): ResolvedConfig => {
   const clock = options.clock ?? systemClock;
   const transport = resolveTransport(options.fetch, options.transport);
   const logger = resolveLogger(options.logger);
+  const auth = resolveAuth(options);
+  const baseUrl = resolveBaseUrl(options.environment, options.baseUrl);
+  requireSameBaseUrl(auth, baseUrl);
   return Object.freeze({
-    auth: resolveAuth(options),
-    baseUrl: resolveBaseUrl(options.environment, options.baseUrl),
+    auth,
+    baseUrl,
     organizationId: optionalNonEmptyString(
       options.organizationId,
       "organizationId",

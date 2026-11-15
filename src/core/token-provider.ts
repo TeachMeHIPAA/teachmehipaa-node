@@ -22,6 +22,11 @@ export interface TokenProvider {
    * that was already replaced is left alone, so concurrent 401s mint once.
    */
   invalidate(accessToken: string): void;
+  /**
+   * The base URL this provider gets Access tokens from, when it has one. The
+   * client refuses a provider whose base URL differs from its own.
+   */
+  readonly baseUrl?: string;
 }
 
 /** Where and how the client talks to the OAuth token endpoint. */

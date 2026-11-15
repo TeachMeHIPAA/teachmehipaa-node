@@ -56,7 +56,9 @@ Generated from the Developer API document release `waggish-wombat`.
 - Partner apps: `TeachMeHipaa.oauth` (PKCE pair, state, consent URL, code
   exchange) and `partnerGrantTokenProvider`, which saves every rotated
   Refresh token to your `TokenStore` before use and never retries a Refresh
-  token exchange.
+  token exchange. The provider exposes its resolved `baseUrl`, and the client
+  throws a `TypeError` at construction when a provider's `baseUrl` differs
+  from its own, so a Grant never refreshes against another Environment.
 - `events.tail` to read the Event log from a saved position, once or
   following new Events.
 - Opt-in request logging without bodies or credentials, a `User-Agent` with

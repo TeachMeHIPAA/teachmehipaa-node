@@ -510,6 +510,12 @@ const learners = await client.learners.list();
 console.log(learners.items.length);
 ```
 
+A Grant belongs to one Environment, so give the provider the same
+`environment` (or `baseUrl`) as the client. The provider exposes the one it
+exchanges Refresh tokens at as `baseUrl`, and the client throws a `TypeError`
+at construction when it differs from its own, rather than sending Sandbox
+requests with tokens refreshed against Live.
+
 > [!WARNING]
 > Presenting a superseded Refresh token revokes the whole Grant (ADR-0004). So
 > `tokenStore.save` must persist durably before it resolves, you should create

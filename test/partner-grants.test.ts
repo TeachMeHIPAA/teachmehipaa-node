@@ -3,7 +3,10 @@ import TeachMeHipaa, {
   ConnectionError,
   OAuthError,
   partnerGrantTokenProvider,
+  staticTokenProvider,
   type PartnerGrantOptions,
+  type TeachMeHipaaOptions,
+  type TokenProvider,
   type TokenStore,
   type Transport,
 } from "../src/index.js";
@@ -307,5 +310,101 @@ describe("Partner Grants", () => {
         "scope",
       ),
     ).toBe("learners:read");
+  });
+});
+
+describe("A Partner Grant's Environment", () => {
+  const LIVE_BASE_URL = "https://api.tme.so/v1";
+  const SANDBOX_BASE_URL = "https://api-teachmehipaa-dev.web.app/v1";
+
+  const provider = (options: Partial<PartnerGrantOptions> = {}) =>
+    partnerGrantTokenProvider({
+      clientId: APP_ID,
+      clientSecret: APP_SECRET,
+      tokenStore: createMemoryStore([]),
+      transport: createFakeTransport().transport,
+      ...options,
+    });
+
+  const clientWith = (
+    tokenProvider: TokenProvider,
+    options: Pick<TeachMeHipaaOptions, "environment" | "baseUrl"> = {},
+  ) =>
+    new TeachMeHipaa({
+      tokenProvider,
+      organizationId: ORG_ID,
+      transport: createFakeTransport().transport,
+      ...options,
+    });
+
+  it("is exposed as the base URL the provider exchanges tokens at", () => {
+    expect(provider().baseUrl).toBe(LIVE_BASE_URL);
+    expect(provider({ environment: "sandbox" }).baseUrl).toBe(SANDBOX_BASE_URL);
+    expect(provider({ baseUrl: "http://localhost:4010/v1/" }).baseUrl).toBe(
+      "http://localhost:4010/v1",
+    );
+  });
+
+  it("must match the client's: a Sandbox client refuses a Live provider", () => {
+    const create = () => clientWith(provider(), { environment: "sandbox" });
+
+    expect(create).toThrow(TypeError);
+    expect(create).toThrow(
+      `teachmehipaa: tokenProvider gets Access tokens from ${LIVE_BASE_URL}, but the client calls ${SANDBOX_BASE_URL}; give both the same environment and baseUrl`,
+    );
+  });
+
+  it("is accepted when it matches the client's", () => {
+    expect(() =>
+      clientWith(provider({ environment: "sandbox" }), {
+        environment: "sandbox",
+      }),
+    ).not.toThrow();
+    expect(() => clientWith(provider())).not.toThrow();
+  });
+
+  it("is compared by base URL when either side overrides it", () => {
+    expect(() =>
+      clientWith(provider({ baseUrl: "http://localhost:4010/v1" }), {
+        baseUrl: "http://localhost:4011/v1",
+      }),
+    ).toThrow(/http:\/\/localhost:4010\/v1.*http:\/\/localhost:4011\/v1/);
+    expect(() =>
+      clientWith(provider({ baseUrl: SANDBOX_BASE_URL }), {
+        environment: "sandbox",
+      }),
+    ).not.toThrow();
+  });
+
+  it("tolerates a trailing slash on either base URL", () => {
+    expect(() =>
+      clientWith(provider({ baseUrl: "http://localhost:4010/v1/" }), {
+        baseUrl: "http://localhost:4010/v1",
+      }),
+    ).not.toThrow();
+    expect(() =>
+      clientWith(
+        {
+          baseUrl: "http://localhost:4010/v1/",
+          getAccessToken: () => Promise.resolve("access-token"),
+          invalidate: () => undefined,
+        },
+        { baseUrl: "http://localhost:4010/v1" },
+      ),
+    ).not.toThrow();
+  });
+
+  it("is not required of a custom token provider", () => {
+    const custom: TokenProvider = {
+      getAccessToken: () => Promise.resolve("access-token"),
+      invalidate: () => undefined,
+    };
+
+    expect(() => clientWith(custom, { environment: "sandbox" })).not.toThrow();
+    expect(() =>
+      clientWith(staticTokenProvider("access-token"), {
+        baseUrl: "http://localhost:4010/v1",
+      }),
+    ).not.toThrow();
   });
 });

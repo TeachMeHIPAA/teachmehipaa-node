@@ -6,8 +6,8 @@ import {
   partnerGrantTokenProvider as realPartnerGrantTokenProvider,
   type Clock,
   type PartnerGrantOptions,
+  type PartnerGrantTokenProvider,
   type TeachMeHipaaOptions,
-  type TokenProvider,
   type Transport,
 } from "../../src/index.js";
 
@@ -48,6 +48,7 @@ export class TeachMeHipaa extends RealTeachMeHipaa {
 
 export const partnerGrantTokenProvider = (
   options: PartnerGrantOptions,
-): TokenProvider => realPartnerGrantTokenProvider(withFakes(options));
+): PartnerGrantTokenProvider =>
+  realPartnerGrantTokenProvider(withFakes(options));
 
 export default TeachMeHipaa;

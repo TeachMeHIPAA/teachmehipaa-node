@@ -39,7 +39,11 @@ export type {
   TokenProviderOptions,
 } from "./core/config.js";
 export type { TokenProvider } from "./core/token-provider.js";
-export type { PartnerGrantOptions, TokenStore } from "./core/partner-grant.js";
+export type {
+  PartnerGrantOptions,
+  PartnerGrantTokenProvider,
+  TokenStore,
+} from "./core/partner-grant.js";
 export type {
   AuthorizeUrlParams,
   ExchangeCodeParams,

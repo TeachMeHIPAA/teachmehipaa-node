@@ -37,6 +37,15 @@ export interface PartnerGrantOptions extends TokenEndpointOptions {
   readonly scopes?: readonly string[];
 }
 
+/** A `TokenProvider` that also says which Environment its Grant lives in. */
+export interface PartnerGrantTokenProvider extends TokenProvider {
+  /**
+   * The base URL the provider exchanges Refresh tokens at, without a
+   * trailing slash. A client given this provider must call the same one.
+   */
+  readonly baseUrl: string;
+}
+
 const { invalid, requireNonEmptyString } = optionsValidator(
   "partnerGrantTokenProvider",
 );
@@ -71,7 +80,7 @@ const saveFailed = (cause: unknown): Error =>
  */
 export const partnerGrantTokenProvider = (
   options: PartnerGrantOptions,
-): TokenProvider => {
+): PartnerGrantTokenProvider => {
   const credentials = {
     clientId: requireNonEmptyString(options.clientId, "clientId"),
     clientSecret: requireNonEmptyString(options.clientSecret, "clientSecret"),
@@ -126,5 +135,8 @@ export const partnerGrantTokenProvider = (
     };
   };
 
-  return cachingTokenProvider(mint, endpoint.clock);
+  return Object.freeze({
+    ...cachingTokenProvider(mint, endpoint.clock),
+    baseUrl: endpoint.baseUrl,
+  });
 };
