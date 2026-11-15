@@ -8,6 +8,8 @@ import TeachMeHipaa, {
   InvalidRequestError,
   NotFoundError,
   OAuthError,
+  OperationFailedError,
+  OperationTimeoutError,
   PermissionDeniedError,
   PreconditionFailedError,
   RateLimitError,
@@ -291,6 +293,8 @@ describe("Errors", () => {
       OAuthError,
       ConnectionError,
       TimeoutError,
+      OperationFailedError,
+      OperationTimeoutError,
       WebhookSignatureError,
     });
   });

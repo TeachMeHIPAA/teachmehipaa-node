@@ -1,4 +1,5 @@
 // Generated from openapi/sdk-ir.json — do not edit. Run `npm run generate`.
+import { requestOperation, type Operation } from "../core/operations.js";
 import { requestPage, type PagePromise } from "../core/pagination.js";
 import type {
   DownloadOptions,
@@ -13,7 +14,6 @@ import type {
 import type { Certificate } from "../models/certificate.js";
 import type { CertificateLinks } from "../models/certificate-links.js";
 import type { CertificatesExportRequest } from "../models/certificates-export-request.js";
-import type { Operation } from "../models/operation.js";
 
 /** Parameters for `certificates.export`. */
 export type CertificateExportParams = CertificatesExportRequest;
@@ -92,12 +92,14 @@ export class Certificates {
    * Export certificates
    *
    * Exports the organization's certificate records as CSV. Requires the `certificates:read` scope.
+   *
+   * Resolves with an Operation; `await operation.wait()` for its final state.
    */
   export(
     params: CertificateExportParams,
     options?: RequestOptions,
-  ): Promise<WithLastResponse<Operation>> {
-    return this.#requester.request<Operation>({
+  ): Promise<Operation> {
+    return requestOperation(this.#requester, {
       method: "POST",
       path: "/certificates:export",
       organizationScoped: true,

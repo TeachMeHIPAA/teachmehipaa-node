@@ -1,4 +1,5 @@
 // Generated from openapi/sdk-ir.json — do not edit. Run `npm run generate`.
+import { requestOperation, type Operation } from "../core/operations.js";
 import { requestPage, type PagePromise } from "../core/pagination.js";
 import type {
   ConditionalWriteOptions,
@@ -16,7 +17,6 @@ import type { LearnerStatus } from "../models/learner-status.js";
 import type { LearnerUpsertRequest } from "../models/learner-upsert-request.js";
 import type { LearnerWriteResult } from "../models/learner-write-result.js";
 import type { LearnersExportRequest } from "../models/learners-export-request.js";
-import type { Operation } from "../models/operation.js";
 
 /** Parameters for `learners.batchUpsert`. */
 export type LearnerBatchUpsertParams = LearnerBatchUpsertRequest;
@@ -85,12 +85,14 @@ export class Learners {
    * Create many learners
    *
    * Creates or retrieves up to 500 learners in one request. Each item works like creating one learner and succeeds or fails on its own.
+   *
+   * Resolves with an Operation; `await operation.wait()` for its final state.
    */
   batchUpsert(
     params: LearnerBatchUpsertParams,
     options?: RequestOptions,
-  ): Promise<WithLastResponse<Operation>> {
-    return this.#requester.request<Operation>({
+  ): Promise<Operation> {
+    return requestOperation(this.#requester, {
       method: "POST",
       path: "/learners:batchUpsert",
       organizationScoped: true,
@@ -148,12 +150,14 @@ export class Learners {
    * Export learners
    *
    * Exports the organization's learners in one course as CSV, optionally only those with one `status`. Requires the `learners:read` scope.
+   *
+   * Resolves with an Operation; `await operation.wait()` for its final state.
    */
   export(
     params: LearnerExportParams,
     options?: RequestOptions,
-  ): Promise<WithLastResponse<Operation>> {
-    return this.#requester.request<Operation>({
+  ): Promise<Operation> {
+    return requestOperation(this.#requester, {
       method: "POST",
       path: "/learners:export",
       organizationScoped: true,

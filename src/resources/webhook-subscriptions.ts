@@ -1,4 +1,9 @@
 // Generated from openapi/sdk-ir.json — do not edit. Run `npm run generate`.
+import {
+  requestOperation,
+  type Operation,
+  type WebhookDeliveryResult,
+} from "../core/operations.js";
 import { requestPage, type PagePromise } from "../core/pagination.js";
 import type {
   ConditionalReadOptions,
@@ -12,7 +17,6 @@ import type {
   NotModified,
   WithLastResponse,
 } from "../core/response.js";
-import type { Operation } from "../models/operation.js";
 import type { WebhookSubscription } from "../models/webhook-subscription.js";
 import type { WebhookSubscriptionCreate } from "../models/webhook-subscription-create.js";
 import type { WebhookSubscriptionCreated } from "../models/webhook-subscription-created.js";
@@ -108,12 +112,14 @@ export class WebhookSubscriptions {
    * Retry failed deliveries
    *
    * Delivers the subscription's failed events again. Requires the `webhooks:manage` or `org:admin` scope.
+   *
+   * Resolves with an Operation; `await operation.wait()` for its final state.
    */
   redrive(
     subscriptionId: string,
     options?: RequestOptions,
-  ): Promise<WithLastResponse<Operation>> {
-    return this.#requester.request<Operation>({
+  ): Promise<Operation<WebhookDeliveryResult>> {
+    return requestOperation<WebhookDeliveryResult>(this.#requester, {
       method: "POST",
       path: "/webhook-subscriptions/{subscriptionId}:redrive",
       pathParams: { subscriptionId },
@@ -177,12 +183,14 @@ export class WebhookSubscriptions {
    * Send a test event
    *
    * Sends a signed test delivery to the subscription's endpoint, so you can check your verifier. Requires the `webhooks:manage` or `org:admin` scope.
+   *
+   * Resolves with an Operation; `await operation.wait()` for its final state.
    */
   test(
     subscriptionId: string,
     options?: RequestOptions,
-  ): Promise<WithLastResponse<Operation>> {
-    return this.#requester.request<Operation>({
+  ): Promise<Operation<WebhookDeliveryResult>> {
+    return requestOperation<WebhookDeliveryResult>(this.#requester, {
       method: "POST",
       path: "/webhook-subscriptions/{subscriptionId}:test",
       pathParams: { subscriptionId },

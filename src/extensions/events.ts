@@ -1,4 +1,4 @@
-import type { Clock } from "../core/clock.js";
+import { pause, type Clock } from "../core/clock.js";
 import type { RequestOptions } from "../core/request-options.js";
 import type { Requester } from "../core/requester.js";
 import type { Event } from "../models/event.js";
@@ -32,22 +32,6 @@ export interface EventTail extends AsyncIterable<Event> {
 }
 
 const DEFAULT_INTERVAL = 2000;
-
-// Clock.sleep can't be cancelled, so race it against the abort to end the
-// tail without waiting out the interval.
-const pause = (
-  clock: Clock,
-  milliseconds: number,
-  signal: AbortSignal | undefined,
-): Promise<void> =>
-  new Promise((resolve) => {
-    const done = () => {
-      signal?.removeEventListener("abort", done);
-      resolve();
-    };
-    signal?.addEventListener("abort", done, { once: true });
-    void clock.sleep(milliseconds).then(done);
-  });
 
 export class Events extends EventsBase {
   readonly #clock: Clock;

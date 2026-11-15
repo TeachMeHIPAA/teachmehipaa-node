@@ -1,4 +1,5 @@
 // Generated from openapi/sdk-ir.json — do not edit. Run `npm run generate`.
+import { requestOperation, type Operation } from "../core/operations.js";
 import { requestPage, type PagePromise } from "../core/pagination.js";
 import type {
   ConditionalReadOptions,
@@ -23,7 +24,6 @@ import type { ImportPreview } from "../models/import-preview.js";
 import type { ListEnrollmentsArchived } from "../models/list-enrollments-archived.js";
 import type { ListEnrollmentsInclude } from "../models/list-enrollments-include.js";
 import type { ListEnrollmentsStatus } from "../models/list-enrollments-status.js";
-import type { Operation } from "../models/operation.js";
 import type { OrgEnrollmentListItem } from "../models/org-enrollment-list-item.js";
 
 /** Parameters for `enrollments.batch`. */
@@ -114,12 +114,14 @@ export class Enrollments {
    * Update many enrollments
    *
    * Reminds, resends, cancels, renews, archives or unarchives up to 500 enrollments in one request, chosen by id or by filter. Each enrollment succeeds or fails on its own. Requires the `enrollments:write` scope.
+   *
+   * Resolves with an Operation; `await operation.wait()` for its final state.
    */
   batchByFilter(
     params: EnrollmentBatchByFilterParams,
     options?: RequestOptions,
-  ): Promise<WithLastResponse<Operation>> {
-    return this.#requester.request<Operation>({
+  ): Promise<Operation> {
+    return requestOperation(this.#requester, {
       method: "POST",
       path: "/enrollments:batch",
       organizationScoped: true,
@@ -176,12 +178,14 @@ export class Enrollments {
    * Export enrollments
    *
    * Exports the organization's enrollments as CSV. Requires the `enrollments:read` scope.
+   *
+   * Resolves with an Operation; `await operation.wait()` for its final state.
    */
   export(
     params: EnrollmentExportParams,
     options?: RequestOptions,
-  ): Promise<WithLastResponse<Operation>> {
-    return this.#requester.request<Operation>({
+  ): Promise<Operation> {
+    return requestOperation(this.#requester, {
       method: "POST",
       path: "/enrollments:export",
       organizationScoped: true,
@@ -196,12 +200,14 @@ export class Enrollments {
    * Import learners from CSV
    *
    * Invites everyone in a CSV file with an `email` column (and optional `name` and `courseId`). Send `validateOnly: true` first to preview the file without inviting anyone. Up to 500 rows. Requires the `enrollments:write` scope.
+   *
+   * Resolves with an Operation; `await operation.wait()` for its final state.
    */
   import(
     params: EnrollmentImportParams,
     options?: RequestOptions,
-  ): Promise<WithLastResponse<Operation>> {
-    return this.#requester.request<Operation>({
+  ): Promise<Operation> {
+    return requestOperation(this.#requester, {
       method: "POST",
       path: "/enrollments:import",
       organizationScoped: true,

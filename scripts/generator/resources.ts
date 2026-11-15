@@ -40,6 +40,16 @@ const JSON_CONTENT_TYPE = "application/json";
  */
 export const EXTENDED_RESOURCES: ReadonlySet<string> = new Set(["events"]);
 
+/**
+ * The type of `Operation.response` for operations that have one, by
+ * operationId, from `src/core/operations.ts`. The spec leaves `response`
+ * untyped (research `api-sdk-surface.md` §8).
+ */
+export const OPERATION_RESPONSES: Readonly<Record<string, string>> = {
+  redriveWebhookSubscription: "WebhookDeliveryResult",
+  testWebhookSubscription: "WebhookDeliveryResult",
+};
+
 const isExtended = (path: readonly string[]): boolean =>
   EXTENDED_RESOURCES.has(path.join("."));
 
@@ -439,8 +449,19 @@ const methodSource = (
           ],
         };
       }
+      case "operation": {
+        // `src/core/operations.ts` builds on the Operation model by name.
+        if (response.type.name !== "Operation") {
+          throw new Error(`${where}: an operation response must be Operation`);
+        }
+        const result = OPERATION_RESPONSES[method.operationId];
+        const type = `${imports.core("operations", "Operation")}${result === undefined ? "" : `<${imports.core("operations", result)}>`}`;
+        return {
+          returnType: `Promise<${type}>`,
+          call: `${imports.coreValue("operations", "requestOperation")}${result === undefined ? "" : `<${result}>`}(this.#requester, `,
+        };
+      }
       case "model":
-      case "operation":
       case "writeResult": {
         const type = renderType(response.type, imports);
         if (conditionalRead) {
@@ -476,9 +497,11 @@ const methodSource = (
         ? "Pass `ifMatch` to make the call conditional on the object's ETag; a stale one raises `PreconditionFailedError` (412)."
         : response.kind === "binary"
           ? "Resolves with the whole file in `data`, or with `asStream: true`, as a web `ReadableStream` in `stream`."
-          : conditionalRead
-            ? "Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`."
-            : null;
+          : response.kind === "operation"
+            ? "Resolves with an Operation; `await operation.wait()` for its final state."
+            : conditionalRead
+              ? "Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`."
+              : null;
   const doc = docComment([method.summary, method.description, conditionNote]);
   const source = `${(overloads ?? []).map((overload) => `${doc}${overload}\n`).join("")}${overloads === undefined ? doc : ""}${method.name}(${signatureWith(requestOptions)}): ${returnType} {\n${destructuring}return ${call}{\n${spec}\n}${trailing ?? ""});\n}\n`;
   return {

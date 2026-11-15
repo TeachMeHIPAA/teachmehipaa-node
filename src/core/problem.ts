@@ -37,6 +37,24 @@ const fieldErrors = (value: unknown): readonly FieldError[] =>
       )
     : [];
 
+/** What a problem says, and a one-line summary of it for an error message. */
+export const problemFields = (
+  value: unknown,
+): Pick<TeachMeHipaaErrorDetails, "code" | "title" | "detail" | "errors"> & {
+  readonly summary: string;
+} => {
+  const problem = isRecord(value) ? value : {};
+  const title = stringOrNull(problem.title);
+  const detail = stringOrNull(problem.detail);
+  return {
+    code: stringOrNull(problem.code),
+    title,
+    detail,
+    errors: fieldErrors(problem.errors),
+    summary: [title, detail].filter((part) => part !== null).join(": "),
+  };
+};
+
 /**
  * Reads a body only after checking it claims to be JSON: unknown paths answer
  * with a 200 HTML page, which must not reach `JSON.parse`.
@@ -120,19 +138,13 @@ export const errorFromResponse = (
   body: ResponseBody,
   now: number,
 ): TeachMeHipaaError => {
-  const problem = isRecord(body.value) ? body.value : {};
-  const title = stringOrNull(problem.title);
-  const detail = stringOrNull(problem.detail);
-  const code = stringOrNull(problem.code);
-  const summary = [title, detail].filter((part) => part !== null).join(": ");
+  const { summary, ...problem } = problemFields(body.value);
+  const { code } = problem;
   const headers = headersToRecord(response.headers);
   const details: TeachMeHipaaErrorDetails = {
     message: summary === "" ? fallbackMessage(response, body) : summary,
     status: response.status,
-    code,
-    title,
-    detail,
-    errors: fieldErrors(problem.errors),
+    ...problem,
     requestId: response.headers.get("x-request-id"),
     headers,
     raw: body.value,

@@ -2,6 +2,7 @@ import { TeachMeHipaa } from "./client.js";
 
 export { TeachMeHipaa };
 export { webhooks } from "./core/webhooks.js";
+export { operationIdFromName } from "./core/operations.js";
 export {
   ApiError,
   AuthenticationError,
@@ -11,6 +12,8 @@ export {
   InvalidRequestError,
   NotFoundError,
   OAuthError,
+  OperationFailedError,
+  OperationTimeoutError,
   PermissionDeniedError,
   PreconditionFailedError,
   RateLimitError,
@@ -48,6 +51,14 @@ export type {
 export type { Page, PagePromise } from "./core/pagination.js";
 export type { EventTail, EventTailParams } from "./extensions/events.js";
 export type { Uploadable } from "./core/uploads.js";
+// `Operation` here, the model plus `wait()` and `exportResult()`, shadows the
+// generated model of the same name in the export below.
+export type {
+  ExportResult,
+  Operation,
+  OperationWaitOptions,
+  WebhookDeliveryResult,
+} from "./core/operations.js";
 export type * from "./models/index.js";
 export type * from "./resources/index.js";
 export type {

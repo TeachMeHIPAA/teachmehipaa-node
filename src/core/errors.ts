@@ -1,3 +1,5 @@
+import type { Operation } from "./operations.js";
+
 /** One invalid field from a `validation_failed` problem. */
 export interface FieldError {
   /** Dot-joined path, or `Idempotency-Key` for a missing header. */
@@ -126,6 +128,37 @@ export class TimeoutError extends ConnectionError {
   override readonly name: string = "TimeoutError";
 }
 
+/**
+ * An Operation finished with an `error`. The problem's fields are on the
+ * error as on any API error; `requestId` and `headers` are the last poll's.
+ */
+export class OperationFailedError extends TeachMeHipaaError {
+  override readonly name: string = "OperationFailedError";
+  /** The finished Operation, with the problem in `error`. */
+  readonly operation: Operation;
+
+  constructor(
+    details: TeachMeHipaaErrorDetails & { readonly operation: Operation },
+  ) {
+    super(details);
+    this.operation = details.operation;
+  }
+}
+
+/** `Operation.wait` gave up before the Operation was done. */
+export class OperationTimeoutError extends TeachMeHipaaError {
+  override readonly name: string = "OperationTimeoutError";
+  /** The Operation as the last poll saw it. Wait on it again to keep going. */
+  readonly operation: Operation;
+
+  constructor(
+    details: TeachMeHipaaErrorDetails & { readonly operation: Operation },
+  ) {
+    super(details);
+    this.operation = details.operation;
+  }
+}
+
 /** Why a Delivery failed verification; branch on `code`. */
 export type WebhookSignatureErrorCode =
   | "missing_header"
@@ -174,5 +207,7 @@ export const errors = Object.freeze({
   OAuthError,
   ConnectionError,
   TimeoutError,
+  OperationFailedError,
+  OperationTimeoutError,
   WebhookSignatureError,
 });

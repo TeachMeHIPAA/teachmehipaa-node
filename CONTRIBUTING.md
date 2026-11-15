@@ -24,6 +24,12 @@ names its class `<Name>Base` (`EventsBase`), and
 the class the client exposes. Add the new method to `HAND_WRITTEN_METHODS` in
 `test/generated-surface.test.ts`.
 
+Methods whose IR response kind is `operation` return the hand-written
+`Operation` from `src/core/operations.ts` (`wait()`, `exportResult()`). The
+spec leaves `Operation.response` untyped; to type it for an operation, add its
+operationId and a type from that file to `OPERATION_RESPONSES` in
+`scripts/generator/resources.ts`.
+
 ## Regenerating
 
 1. Copy `openapi.developer.json`, `sdk-ir.json` and `sdk-ir.schema.json` from
