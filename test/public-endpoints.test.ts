@@ -21,7 +21,7 @@ const verificationBody = {
   courseTitle: "HIPAA Training 2026",
   issuedAt: "2026-11-02T10:30:00.000Z",
   expiresAt: "2027-11-02T10:30:00.000Z",
-  issuer: { name: "TeachMeHIPAA", url: "https://teachmehipaa.com" },
+  issuer: "TeachMeHIPAA",
 };
 
 /** Fails the test if the client ever asks it for a token. */
