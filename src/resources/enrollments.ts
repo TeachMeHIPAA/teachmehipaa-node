@@ -1,8 +1,12 @@
 // Generated from openapi/sdk-ir.json — do not edit. Run `npm run generate`.
 import { requestPage, type PagePromise } from "../core/pagination.js";
-import type { RequestOptions } from "../core/request-options.js";
+import type {
+  ConditionalReadOptions,
+  ETagSource,
+  RequestOptions,
+} from "../core/request-options.js";
 import type { Requester } from "../core/requester.js";
-import type { WithLastResponse } from "../core/response.js";
+import type { NotModified, WithLastResponse } from "../core/response.js";
 import type { CancelEnrollmentResponse } from "../models/cancel-enrollment-response.js";
 import type { Enrollment } from "../models/enrollment.js";
 import type { EnrollmentActionAccepted } from "../models/enrollment-action-accepted.js";
@@ -327,18 +331,47 @@ export class Enrollments {
    * Retrieve an enrollment
    *
    * Retrieves an enrollment. Requires the `enrollments:read` scope.
+   *
+   * Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`.
    */
   retrieve(
     enrollmentId: string,
-    options?: RequestOptions,
-  ): Promise<WithLastResponse<Enrollment>> {
-    return this.#requester.request<Enrollment>({
+    options: ConditionalReadOptions & { readonly ifNoneMatch: ETagSource },
+  ): Promise<WithLastResponse<Enrollment> | NotModified>;
+  /**
+   * Retrieve an enrollment
+   *
+   * Retrieves an enrollment. Requires the `enrollments:read` scope.
+   *
+   * Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`.
+   */
+  retrieve(
+    enrollmentId: string,
+    options?: RequestOptions & { readonly ifNoneMatch?: never },
+  ): Promise<WithLastResponse<Enrollment>>;
+  /**
+   * Retrieve an enrollment
+   *
+   * Retrieves an enrollment. Requires the `enrollments:read` scope.
+   *
+   * Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`.
+   */
+  retrieve(
+    enrollmentId: string,
+    options?: ConditionalReadOptions,
+  ): Promise<WithLastResponse<Enrollment> | NotModified>;
+  retrieve(
+    enrollmentId: string,
+    options?: ConditionalReadOptions,
+  ): Promise<WithLastResponse<Enrollment> | NotModified> {
+    return this.#requester.request<Enrollment | NotModified>({
       method: "GET",
       path: "/enrollments/{enrollmentId}",
       pathParams: { enrollmentId },
       organizationScoped: true,
       retrySafe: true,
       idempotencyKey: "none",
+      ifNoneMatch: options?.ifNoneMatch,
       options,
     });
   }

@@ -8,11 +8,13 @@ import {
   readBody,
   type ResponseBody,
 } from "./problem.js";
-import type { RequestOptions } from "./request-options.js";
+import type { ETagSource, RequestOptions } from "./request-options.js";
 import {
   responseMetadata,
   withLastResponse,
   type BinaryResponse,
+  type BinaryStreamResponse,
+  type NotModified,
   type WithLastResponse,
 } from "./response.js";
 import {
@@ -56,6 +58,10 @@ export interface RequestSpec {
   readonly binaryParts?: readonly BinaryPart[];
   /** What a success looks like. Defaults to a JSON object. */
   readonly response?: ExpectedResponse;
+  /** Sent as `If-Match`, for operations the IR marks as conditional. */
+  readonly ifMatch?: ETagSource | undefined;
+  /** Sent as `If-None-Match`; a 304 then resolves `NotModified`. */
+  readonly ifNoneMatch?: ETagSource | undefined;
   readonly options?: RequestOptions | undefined;
 }
 
@@ -69,7 +75,12 @@ export type ExpectedResponse =
   | { readonly kind: "writeResult" }
   /** No body (204); success is the status alone. */
   | { readonly kind: "empty" }
-  | { readonly kind: "binary"; readonly contentType: string };
+  | {
+      readonly kind: "binary";
+      readonly contentType: string;
+      /** Hand back the body unread, as a stream. */
+      readonly stream?: boolean;
+    };
 
 export interface RequesterSettings {
   readonly baseUrl: string;
@@ -99,11 +110,14 @@ interface PreparedCall {
   readonly maxRetries: number;
   readonly retrySafe: boolean;
   readonly expected: ExpectedResponse;
+  /** The call sent `If-None-Match`, so a 304 is a success. */
+  readonly conditionalRead: boolean;
 }
 
 /** What arrived: the whole file for a binary success, else the parsed body. */
 type Payload =
   | { readonly kind: "binary"; readonly data: Uint8Array }
+  | { readonly kind: "stream"; readonly stream: ReadableStream<Uint8Array> }
   | { readonly kind: "body"; readonly body: ResponseBody };
 
 const mediaType = (contentType: string | null): string | null =>
@@ -123,10 +137,18 @@ const isBinarySuccess = (
 const readPayload = async (
   response: Response,
   expected: ExpectedResponse,
-): Promise<Payload> =>
-  isBinarySuccess(response, expected)
-    ? { kind: "binary", data: new Uint8Array(await response.arrayBuffer()) }
-    : { kind: "body", body: await readBody(response) };
+): Promise<Payload> => {
+  if (!isBinarySuccess(response, expected)) {
+    return { kind: "body", body: await readBody(response) };
+  }
+  if (expected.kind === "binary" && expected.stream === true) {
+    return { kind: "stream", stream: response.body ?? new Blob([]).stream() };
+  }
+  return {
+    kind: "binary",
+    data: new Uint8Array(await response.arrayBuffer()),
+  };
+};
 
 // RFC 6266: prefer the UTF-8 `filename*`, else the plain `filename`.
 const filenameOf = (contentDisposition: string | null): string | null => {
@@ -142,8 +164,9 @@ const filenameOf = (contentDisposition: string | null): string | null => {
   return /filename="?([^";]+)"?/i.exec(header)?.[1] ?? null;
 };
 
-const binaryValue = (response: Response, data: Uint8Array): BinaryResponse => ({
-  data,
+const fileHeaders = (
+  response: Response,
+): Pick<BinaryResponse, "contentType" | "filename"> => ({
   contentType: response.headers.get("content-type"),
   filename: filenameOf(response.headers.get("content-disposition")),
 });
@@ -169,6 +192,19 @@ const successValue = (
         : body.value;
     }
   }
+};
+
+const etagOf = (source: ETagSource, header: string): string => {
+  if (typeof source === "string") {
+    return source;
+  }
+  const { etag } = source.lastResponse;
+  if (etag === null) {
+    throw new TypeError(
+      `TeachMeHipaa: ${header} was given an object whose response had no ETag`,
+    );
+  }
+  return etag;
 };
 
 const expandPath = (
@@ -197,6 +233,18 @@ const queryString = (query: QueryParams | undefined): string => {
 const isUnauthorized = (error: TeachMeHipaaError): boolean =>
   error.status === 401 && error.code === "unauthorized";
 
+// Async because a multipart body reads its files, once per call.
+const encodeBody = async (
+  spec: RequestSpec,
+): Promise<string | FormData | undefined> => {
+  if (spec.body === undefined) {
+    return undefined;
+  }
+  return spec.contentType === "multipart/form-data"
+    ? multipartBody(spec.body, spec.binaryParts ?? [])
+    : JSON.stringify(spec.body);
+};
+
 export const createRequester = (settings: RequesterSettings): Requester => {
   const { clock } = settings;
 
@@ -223,12 +271,27 @@ export const createRequester = (settings: RequesterSettings): Requester => {
     const { response, payload } = received;
     const metadata = responseMetadata(response);
     if (payload.kind === "binary") {
+      const file: BinaryResponse = {
+        data: payload.data,
+        ...fileHeaders(response),
+      };
+      return { ok: true, value: withLastResponse(file as T, metadata) };
+    }
+    if (payload.kind === "stream") {
+      const file: BinaryStreamResponse = {
+        stream: payload.stream,
+        ...fileHeaders(response),
+      };
+      return { ok: true, value: withLastResponse(file as T, metadata) };
+    }
+    if (call.conditionalRead && response.status === 304) {
+      const notModified: NotModified = {
+        notModified: true,
+        lastResponse: metadata,
+      };
       return {
         ok: true,
-        value: withLastResponse(
-          binaryValue(response, payload.data) as T,
-          metadata,
-        ),
+        value: withLastResponse(notModified as T, metadata),
       };
     }
     const value = response.ok
@@ -276,18 +339,27 @@ export const createRequester = (settings: RequesterSettings): Requester => {
 
   // Runs once per call, so everything fixed here (the Idempotency-Key above
   // all) is identical on every retry.
-  const prepare = (spec: RequestSpec, path: string): PreparedCall => {
+  const prepare = (
+    spec: RequestSpec,
+    path: string,
+    body: string | FormData | undefined,
+  ): PreparedCall => {
     const options = spec.options ?? {};
     const idempotencyKey =
       options.idempotencyKey ??
       (spec.idempotencyKey === "required" ? randomUUID() : undefined);
     const contentType = spec.contentType ?? "application/json";
     const multipart = contentType === "multipart/form-data";
+    const expected = spec.response ?? { kind: "json" };
     return {
       method: spec.method,
       url: `${settings.baseUrl}${path}${queryString(spec.query)}`,
       headers: {
-        accept: "application/json",
+        // Errors still arrive as problem+json, so a file download accepts both.
+        accept:
+          expected.kind === "binary"
+            ? `${expected.contentType}, application/problem+json`
+            : "application/json",
         "user-agent": settings.userAgent,
         // fetch writes a multipart Content-Type itself, with the boundary.
         ...(spec.body === undefined || multipart
@@ -296,20 +368,22 @@ export const createRequester = (settings: RequesterSettings): Requester => {
         ...(idempotencyKey === undefined
           ? {}
           : { "idempotency-key": idempotencyKey }),
+        ...(spec.ifMatch === undefined
+          ? {}
+          : { "if-match": etagOf(spec.ifMatch, "ifMatch") }),
+        ...(spec.ifNoneMatch === undefined
+          ? {}
+          : { "if-none-match": etagOf(spec.ifNoneMatch, "ifNoneMatch") }),
         ...(options.requestId === undefined
           ? {}
           : { "x-request-id": options.requestId }),
       },
-      body:
-        spec.body === undefined
-          ? undefined
-          : multipart
-            ? multipartBody(spec.body, spec.binaryParts ?? [])
-            : JSON.stringify(spec.body),
+      body,
       timeout: options.timeout ?? settings.timeout,
       maxRetries: options.maxRetries ?? settings.maxRetries,
       retrySafe: spec.retrySafe,
-      expected: spec.response ?? { kind: "json" },
+      expected,
+      conditionalRead: spec.ifNoneMatch !== undefined,
     };
   };
 
@@ -324,6 +398,7 @@ export const createRequester = (settings: RequesterSettings): Requester => {
           idempotencyKey: "none",
         },
         "/auth/introspection",
+        undefined,
       ),
     );
     if (typeof introspection.orgId === "string" && introspection.orgId !== "") {
@@ -353,7 +428,7 @@ export const createRequester = (settings: RequesterSettings): Requester => {
       const path = spec.organizationScoped
         ? `/organizations/${encodeURIComponent(await organization.organizationId())}${relative}`
         : relative;
-      return send<T>(prepare(spec, path));
+      return send<T>(prepare(spec, path, await encodeBody(spec)));
     },
   };
 };

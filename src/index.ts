@@ -30,10 +30,18 @@ export type { Environment } from "./core/config.js";
 export type { Clock } from "./core/clock.js";
 export type { AppInfo } from "./core/user-agent.js";
 export type { Logger, RequestLogFields } from "./core/logging.js";
-export type { RequestOptions } from "./core/request-options.js";
+export type {
+  ConditionalReadOptions,
+  ConditionalWriteOptions,
+  DownloadOptions,
+  ETagSource,
+  RequestOptions,
+} from "./core/request-options.js";
 export type {
   BinaryResponse,
+  BinaryStreamResponse,
   EmptyResponse,
+  NotModified,
   ResponseMetadata,
   WithLastResponse,
 } from "./core/response.js";

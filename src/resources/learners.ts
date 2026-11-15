@@ -1,6 +1,9 @@
 // Generated from openapi/sdk-ir.json — do not edit. Run `npm run generate`.
 import { requestPage, type PagePromise } from "../core/pagination.js";
-import type { RequestOptions } from "../core/request-options.js";
+import type {
+  ConditionalWriteOptions,
+  RequestOptions,
+} from "../core/request-options.js";
 import type { Requester } from "../core/requester.js";
 import type { WithLastResponse } from "../core/response.js";
 import type { Learner } from "../models/learner.js";
@@ -196,11 +199,13 @@ export class Learners {
    * Offboard a learner
    *
    * Removes a learner from the organization. A learner who hasn't started has their invite cancelled and the seat returned; a learner who has started keeps their training history and certificates. Releases the learner's `externalId`.
+   *
+   * Pass `ifMatch` to make the call conditional on the object's ETag; a stale one raises `PreconditionFailedError` (412).
    */
   offboard(
     learnerId: string,
     params?: LearnerOffboardParams,
-    options?: RequestOptions,
+    options?: ConditionalWriteOptions,
   ): Promise<WithLastResponse<Learner>> {
     return this.#requester.request<Learner>({
       method: "POST",
@@ -210,6 +215,7 @@ export class Learners {
       retrySafe: true,
       idempotencyKey: "required",
       query: { courseId: params?.courseId },
+      ifMatch: options?.ifMatch,
       options,
     });
   }
@@ -262,11 +268,13 @@ export class Learners {
    * Update a learner
    *
    * Updates a learner's `name` or `externalId`; parameters you don't send are left unchanged. Send the body as `application/merge-patch+json` with the learner's current `ETag` in `If-Match`.
+   *
+   * Pass the object's current ETag as `ifMatch`, such as the object you read: `{ ifMatch: object }`. Without it the API refuses the write with `PreconditionFailedError` (428); with a stale one, the same error (412).
    */
   update(
     learnerId: string,
     params: LearnerUpdateParams,
-    options?: RequestOptions,
+    options?: ConditionalWriteOptions,
   ): Promise<WithLastResponse<Learner>> {
     const { courseId, ...body } = params;
     return this.#requester.request<Learner>({
@@ -279,6 +287,7 @@ export class Learners {
       query: { courseId },
       body: body,
       contentType: "application/merge-patch+json",
+      ifMatch: options?.ifMatch,
       options,
     });
   }

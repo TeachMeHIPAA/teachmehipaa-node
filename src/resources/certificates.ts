@@ -1,8 +1,15 @@
 // Generated from openapi/sdk-ir.json — do not edit. Run `npm run generate`.
 import { requestPage, type PagePromise } from "../core/pagination.js";
-import type { RequestOptions } from "../core/request-options.js";
+import type {
+  DownloadOptions,
+  RequestOptions,
+} from "../core/request-options.js";
 import type { Requester } from "../core/requester.js";
-import type { BinaryResponse, WithLastResponse } from "../core/response.js";
+import type {
+  BinaryResponse,
+  BinaryStreamResponse,
+  WithLastResponse,
+} from "../core/response.js";
 import type { Certificate } from "../models/certificate.js";
 import type { CertificateLinks } from "../models/certificate-links.js";
 import type { CertificatesExportRequest } from "../models/certificates-export-request.js";
@@ -32,19 +39,51 @@ export class Certificates {
    * Download a certificate
    *
    * Downloads the certificate as a PDF. Revoked and expired certificates are watermarked. Requires the `certificates:read` scope.
+   *
+   * Resolves with the whole file in `data`, or with `asStream: true`, as a web `ReadableStream` in `stream`.
    */
   downloadPdf(
     certId: string,
-    options?: RequestOptions,
-  ): Promise<WithLastResponse<BinaryResponse>> {
-    return this.#requester.request<BinaryResponse>({
+    options: DownloadOptions & { readonly asStream: true },
+  ): Promise<WithLastResponse<BinaryStreamResponse>>;
+  /**
+   * Download a certificate
+   *
+   * Downloads the certificate as a PDF. Revoked and expired certificates are watermarked. Requires the `certificates:read` scope.
+   *
+   * Resolves with the whole file in `data`, or with `asStream: true`, as a web `ReadableStream` in `stream`.
+   */
+  downloadPdf(
+    certId: string,
+    options?: DownloadOptions & { readonly asStream?: false },
+  ): Promise<WithLastResponse<BinaryResponse>>;
+  /**
+   * Download a certificate
+   *
+   * Downloads the certificate as a PDF. Revoked and expired certificates are watermarked. Requires the `certificates:read` scope.
+   *
+   * Resolves with the whole file in `data`, or with `asStream: true`, as a web `ReadableStream` in `stream`.
+   */
+  downloadPdf(
+    certId: string,
+    options?: DownloadOptions,
+  ): Promise<WithLastResponse<BinaryResponse | BinaryStreamResponse>>;
+  downloadPdf(
+    certId: string,
+    options?: DownloadOptions,
+  ): Promise<WithLastResponse<BinaryResponse | BinaryStreamResponse>> {
+    return this.#requester.request<BinaryResponse | BinaryStreamResponse>({
       method: "GET",
       path: "/certificates/{certId}/content",
       pathParams: { certId },
       organizationScoped: true,
       retrySafe: true,
       idempotencyKey: "none",
-      response: { kind: "binary", contentType: "application/pdf" },
+      response: {
+        kind: "binary",
+        contentType: "application/pdf",
+        stream: options?.asStream === true,
+      },
       options,
     });
   }

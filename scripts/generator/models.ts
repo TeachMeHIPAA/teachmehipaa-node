@@ -58,13 +58,17 @@ const renderField = (
   field: IrField,
   imports: Imports,
   discriminator: DiscriminatorLiteral | undefined,
+  mergePatch: boolean,
 ): string => {
   const type =
     discriminator?.property === field.name
       ? discriminator.values.map(literal).join(" | ")
       : withNull(renderType(field.type, imports), field.nullable);
   const optional = field.required ? "" : "?";
-  return `${fieldDoc(field.description, field.type)}readonly ${field.name}${optional}: ${type};`;
+  // In a merge patch `undefined` means "leave unchanged" (grilling Q28), so
+  // callers with exactOptionalPropertyTypes may pass it explicitly.
+  const unset = mergePatch && !field.required ? " | undefined" : "";
+  return `${fieldDoc(field.description, field.type)}readonly ${field.name}${optional}: ${type}${unset};`;
 };
 
 const renderObject = (
@@ -76,7 +80,9 @@ const renderObject = (
     (field) => field.name === discriminator?.property,
   );
   const fields = [
-    ...type.fields.map((field) => renderField(field, imports, discriminator)),
+    ...type.fields.map((field) =>
+      renderField(field, imports, discriminator, type.mergePatch),
+    ),
     ...(discriminator === undefined || declared
       ? []
       : [
@@ -84,7 +90,7 @@ const renderObject = (
         ]),
   ];
   const notes = type.mergePatch
-    ? "Sent as a JSON merge patch: omit a field to leave it unchanged; `null` clears a nullable field."
+    ? "Sent as a JSON merge patch: omit a field (or leave it `undefined`) to leave it unchanged; `null` clears a nullable field."
     : null;
   return `${docComment([type.description, notes])}export interface ${type.name} {\n${fields.join("\n")}\n}\n`;
 };

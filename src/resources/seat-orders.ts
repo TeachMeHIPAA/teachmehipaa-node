@@ -1,8 +1,12 @@
 // Generated from openapi/sdk-ir.json — do not edit. Run `npm run generate`.
 import { requestPage, type PagePromise } from "../core/pagination.js";
-import type { RequestOptions } from "../core/request-options.js";
+import type {
+  ConditionalReadOptions,
+  ETagSource,
+  RequestOptions,
+} from "../core/request-options.js";
 import type { Requester } from "../core/requester.js";
-import type { WithLastResponse } from "../core/response.js";
+import type { NotModified, WithLastResponse } from "../core/response.js";
 import type { SeatOrder } from "../models/seat-order.js";
 import type { SeatOrderCreateRequest } from "../models/seat-order-create-request.js";
 import type { SeatOrderCreated } from "../models/seat-order-created.js";
@@ -98,18 +102,47 @@ export class SeatOrders {
    * Retrieve a seat order
    *
    * Retrieves a seat order, its status and the seats it granted. Requires the `seats:purchase` or `billing:write` scope.
+   *
+   * Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`.
    */
   retrieve(
     seatOrderId: string,
-    options?: RequestOptions,
-  ): Promise<WithLastResponse<SeatOrder>> {
-    return this.#requester.request<SeatOrder>({
+    options: ConditionalReadOptions & { readonly ifNoneMatch: ETagSource },
+  ): Promise<WithLastResponse<SeatOrder> | NotModified>;
+  /**
+   * Retrieve a seat order
+   *
+   * Retrieves a seat order, its status and the seats it granted. Requires the `seats:purchase` or `billing:write` scope.
+   *
+   * Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`.
+   */
+  retrieve(
+    seatOrderId: string,
+    options?: RequestOptions & { readonly ifNoneMatch?: never },
+  ): Promise<WithLastResponse<SeatOrder>>;
+  /**
+   * Retrieve a seat order
+   *
+   * Retrieves a seat order, its status and the seats it granted. Requires the `seats:purchase` or `billing:write` scope.
+   *
+   * Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`.
+   */
+  retrieve(
+    seatOrderId: string,
+    options?: ConditionalReadOptions,
+  ): Promise<WithLastResponse<SeatOrder> | NotModified>;
+  retrieve(
+    seatOrderId: string,
+    options?: ConditionalReadOptions,
+  ): Promise<WithLastResponse<SeatOrder> | NotModified> {
+    return this.#requester.request<SeatOrder | NotModified>({
       method: "GET",
       path: "/seat-orders/{seatOrderId}",
       pathParams: { seatOrderId },
       organizationScoped: true,
       retrySafe: true,
       idempotencyKey: "none",
+      ifNoneMatch: options?.ifNoneMatch,
       options,
     });
   }

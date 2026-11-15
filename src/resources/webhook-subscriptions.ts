@@ -1,8 +1,17 @@
 // Generated from openapi/sdk-ir.json — do not edit. Run `npm run generate`.
 import { requestPage, type PagePromise } from "../core/pagination.js";
-import type { RequestOptions } from "../core/request-options.js";
+import type {
+  ConditionalReadOptions,
+  ConditionalWriteOptions,
+  ETagSource,
+  RequestOptions,
+} from "../core/request-options.js";
 import type { Requester } from "../core/requester.js";
-import type { EmptyResponse, WithLastResponse } from "../core/response.js";
+import type {
+  EmptyResponse,
+  NotModified,
+  WithLastResponse,
+} from "../core/response.js";
 import type { Operation } from "../models/operation.js";
 import type { WebhookSubscription } from "../models/webhook-subscription.js";
 import type { WebhookSubscriptionCreate } from "../models/webhook-subscription-create.js";
@@ -119,18 +128,47 @@ export class WebhookSubscriptions {
    * Retrieve a webhook subscription
    *
    * Retrieves a webhook subscription. Requires the `webhooks:manage` or `org:admin` scope.
+   *
+   * Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`.
    */
   retrieve(
     subscriptionId: string,
-    options?: RequestOptions,
-  ): Promise<WithLastResponse<WebhookSubscription>> {
-    return this.#requester.request<WebhookSubscription>({
+    options: ConditionalReadOptions & { readonly ifNoneMatch: ETagSource },
+  ): Promise<WithLastResponse<WebhookSubscription> | NotModified>;
+  /**
+   * Retrieve a webhook subscription
+   *
+   * Retrieves a webhook subscription. Requires the `webhooks:manage` or `org:admin` scope.
+   *
+   * Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`.
+   */
+  retrieve(
+    subscriptionId: string,
+    options?: RequestOptions & { readonly ifNoneMatch?: never },
+  ): Promise<WithLastResponse<WebhookSubscription>>;
+  /**
+   * Retrieve a webhook subscription
+   *
+   * Retrieves a webhook subscription. Requires the `webhooks:manage` or `org:admin` scope.
+   *
+   * Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`.
+   */
+  retrieve(
+    subscriptionId: string,
+    options?: ConditionalReadOptions,
+  ): Promise<WithLastResponse<WebhookSubscription> | NotModified>;
+  retrieve(
+    subscriptionId: string,
+    options?: ConditionalReadOptions,
+  ): Promise<WithLastResponse<WebhookSubscription> | NotModified> {
+    return this.#requester.request<WebhookSubscription | NotModified>({
       method: "GET",
       path: "/webhook-subscriptions/{subscriptionId}",
       pathParams: { subscriptionId },
       organizationScoped: true,
       retrySafe: true,
       idempotencyKey: "none",
+      ifNoneMatch: options?.ifNoneMatch,
       options,
     });
   }
@@ -159,11 +197,13 @@ export class WebhookSubscriptions {
    * Update a webhook subscription
    *
    * Updates a webhook subscription; parameters you don't send are left unchanged. Send its current `ETag` in `If-Match`. The signing secret doesn't change. Requires the `webhooks:manage` or `org:admin` scope.
+   *
+   * Pass the object's current ETag as `ifMatch`, such as the object you read: `{ ifMatch: object }`. Without it the API refuses the write with `PreconditionFailedError` (428); with a stale one, the same error (412).
    */
   update(
     subscriptionId: string,
     params: WebhookSubscriptionUpdateParams,
-    options?: RequestOptions,
+    options?: ConditionalWriteOptions,
   ): Promise<WithLastResponse<WebhookSubscription>> {
     return this.#requester.request<WebhookSubscription>({
       method: "PATCH",
@@ -174,6 +214,7 @@ export class WebhookSubscriptions {
       idempotencyKey: "none",
       body: params,
       contentType: "application/merge-patch+json",
+      ifMatch: options?.ifMatch,
       options,
     });
   }

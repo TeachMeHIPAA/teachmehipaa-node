@@ -18,6 +18,15 @@ export interface EmptyResponse {
   readonly lastResponse: ResponseMetadata;
 }
 
+/**
+ * A conditional read's 304: the object still has the ETag you sent, so keep
+ * using your copy. Tell it apart with `"notModified" in result`.
+ */
+export interface NotModified {
+  readonly notModified: true;
+  readonly lastResponse: ResponseMetadata;
+}
+
 /** A file the API sent, such as a Certificate PDF. */
 export interface BinaryResponse {
   readonly data: Uint8Array;
@@ -48,3 +57,13 @@ export const withLastResponse = <T extends object>(
     value: metadata,
     enumerable: false,
   }) as WithLastResponse<T>;
+
+/** A file the API is sending, as a stream: a download with `asStream: true`. */
+export interface BinaryStreamResponse {
+  /** The file's bytes. Read it once; it is not buffered. */
+  readonly stream: ReadableStream<Uint8Array>;
+  /** The `Content-Type`, e.g. `application/pdf`. */
+  readonly contentType: string | null;
+  /** The file name from `Content-Disposition`, when the API gives one. */
+  readonly filename: string | null;
+}

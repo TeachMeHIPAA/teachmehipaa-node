@@ -327,14 +327,38 @@ const methodSource = (
           .join(", ")} }`;
 
   const response = method.response;
-  const requestOptions = imports.core("request-options", "RequestOptions");
-  const signature = [
-    ...method.pathParams.map(
-      (param) => `${param.name}: ${renderType(param.type, imports)}`,
-    ),
-    ...(hasParams ? [`params${paramsRequired ? "" : "?"}: ${typeName}`] : []),
-    `options?: ${requestOptions}`,
-  ].join(", ");
+  const conditionalWrite = method.ifMatch !== "none";
+  const conditionalRead = method.ifNoneMatch !== "none";
+  if (conditionalRead && response.kind !== "model") {
+    throw new Error(`${where}: If-None-Match needs a model response`);
+  }
+  const requestOptions = imports.core(
+    "request-options",
+    conditionalWrite
+      ? "ConditionalWriteOptions"
+      : conditionalRead
+        ? "ConditionalReadOptions"
+        : response.kind === "binary"
+          ? "DownloadOptions"
+          : "RequestOptions",
+  );
+  /** The parameter list, with `options` required or optional. */
+  const signatureWith = (options: string, optionsRequired = false): string =>
+    [
+      ...method.pathParams.map(
+        (param) => `${param.name}: ${renderType(param.type, imports)}`,
+      ),
+      ...(hasParams
+        ? [
+            paramsRequired
+              ? `params: ${typeName}`
+              : optionsRequired
+                ? `params: ${typeName} | undefined`
+                : `params?: ${typeName}`,
+          ]
+        : []),
+      `options${optionsRequired ? "" : "?"}: ${options}`,
+    ].join(", ");
 
   const spec = [
     `method: ${literal(method.httpMethod)}`,
@@ -362,11 +386,13 @@ const methodSource = (
     ...(body === null || body.binaryParts.length === 0
       ? []
       : [`binaryParts: ${JSON.stringify(body.binaryParts)}`]),
+    ...(conditionalWrite ? ["ifMatch: options?.ifMatch"] : []),
+    ...(conditionalRead ? ["ifNoneMatch: options?.ifNoneMatch"] : []),
     ...(response.kind === "writeResult" || response.kind === "empty"
       ? [`response: { kind: ${literal(response.kind)} }`]
       : response.kind === "binary"
         ? [
-            `response: { kind: "binary", contentType: ${literal(response.contentType)} }`,
+            `response: { kind: "binary", contentType: ${literal(response.contentType)}, stream: options?.asStream === true }`,
           ]
         : []),
     "options",
@@ -374,10 +400,12 @@ const methodSource = (
 
   const withLastResponse = (type: string) =>
     `Promise<${imports.core("response", "WithLastResponse")}<${type}>>`;
-  const { returnType, call, trailing } = ((): {
+  const { returnType, call, trailing, overloads } = ((): {
     returnType: string;
     call: string;
     trailing?: string;
+    /** Public signatures that narrow the return type by the options. */
+    overloads?: readonly string[];
   } => {
     switch (response.kind) {
       case "page": {
@@ -398,16 +426,38 @@ const methodSource = (
           call: "this.#requester.request<object>(",
         };
       case "binary": {
-        const type = imports.core("response", "BinaryResponse");
+        const bytes = imports.core("response", "BinaryResponse");
+        const stream = imports.core("response", "BinaryStreamResponse");
+        const either = withLastResponse(`${bytes} | ${stream}`);
         return {
-          returnType: withLastResponse(type),
-          call: `this.#requester.request<${type}>(`,
+          returnType: either,
+          call: `this.#requester.request<${bytes} | ${stream}>(`,
+          overloads: [
+            `${method.name}(${signatureWith(`${requestOptions} & { readonly asStream: true }`, true)}): ${withLastResponse(stream)};`,
+            `${method.name}(${signatureWith(`${requestOptions} & { readonly asStream?: false }`)}): ${withLastResponse(bytes)};`,
+            `${method.name}(${signatureWith(requestOptions)}): ${either};`,
+          ],
         };
       }
       case "model":
       case "operation":
       case "writeResult": {
         const type = renderType(response.type, imports);
+        if (conditionalRead) {
+          const notModified = imports.core("response", "NotModified");
+          const either = `Promise<${imports.core("response", "WithLastResponse")}<${type}> | ${notModified}>`;
+          const etag = imports.core("request-options", "ETagSource");
+          const plain = imports.core("request-options", "RequestOptions");
+          return {
+            returnType: either,
+            call: `this.#requester.request<${type} | ${notModified}>(`,
+            overloads: [
+              `${method.name}(${signatureWith(`${requestOptions} & { readonly ifNoneMatch: ${etag} }`, true)}): ${either};`,
+              `${method.name}(${signatureWith(`${plain} & { readonly ifNoneMatch?: never }`)}): ${withLastResponse(type)};`,
+              `${method.name}(${signatureWith(requestOptions)}): ${either};`,
+            ],
+          };
+        }
         return {
           returnType: withLastResponse(type),
           call: `this.#requester.request<${type}>(`,
@@ -419,7 +469,18 @@ const methodSource = (
   const destructuring = destructure
     ? `const { ${method.queryParams.map((param) => param.name).join(", ")}, ...body }${paramsRequired ? " = params" : `: ${typeName} = params ?? {}`};\n`
     : "";
-  const source = `${docComment([method.summary, method.description])}${method.name}(${signature}): ${returnType} {\n${destructuring}return ${call}{\n${spec}\n}${trailing ?? ""});\n}\n`;
+  const conditionNote =
+    method.ifMatch === "required"
+      ? "Pass the object's current ETag as `ifMatch`, such as the object you read: `{ ifMatch: object }`. Without it the API refuses the write with `PreconditionFailedError` (428); with a stale one, the same error (412)."
+      : method.ifMatch === "optional"
+        ? "Pass `ifMatch` to make the call conditional on the object's ETag; a stale one raises `PreconditionFailedError` (412)."
+        : response.kind === "binary"
+          ? "Resolves with the whole file in `data`, or with `asStream: true`, as a web `ReadableStream` in `stream`."
+          : conditionalRead
+            ? "Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`."
+            : null;
+  const doc = docComment([method.summary, method.description, conditionNote]);
+  const source = `${(overloads ?? []).map((overload) => `${doc}${overload}\n`).join("")}${overloads === undefined ? doc : ""}${method.name}(${signatureWith(requestOptions)}): ${returnType} {\n${destructuring}return ${call}{\n${spec}\n}${trailing ?? ""});\n}\n`;
   return {
     params,
     method: source,
