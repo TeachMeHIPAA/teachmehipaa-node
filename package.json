@@ -1,0 +1,54 @@
+{
+  "name": "teachmehipaa",
+  "version": "0.0.0",
+  "description": "Official Node.js and TypeScript library for the TeachMeHIPAA Developer API",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TeachMeHIPAA/teachmehipaa-node.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "check:dist": "node scripts/check-dist.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@types/node": "20.19.43",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "10.1.8",
+    "prettier": "3.10.1",
+    "tsup": "8.5.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.72.2",
+    "vitest": "3.2.7"
+  }
+}
