@@ -172,14 +172,17 @@ Releases go out from `.github/workflows/release.yml`, which runs only when
 dispatched by hand. A run with `publish` unchecked (the default) runs lint,
 type checks, unit and contract tests, the build, `check:dist` and
 `npm pack --dry-run`, and publishes nothing. With `publish` checked it then
-runs `npm publish --provenance --access public` through npm trusted
-publishing (OIDC, no npm token stored in the repo).
+runs `npm publish` in the `npm` environment through npm trusted publishing
+(OIDC, no npm token stored in the repo). `publishConfig` sets public access
+and provenance.
 
 `package.json` keeps `"private": true` until launch, so a `publish` run
 fails at `npm publish` (`EPRIVATE`) even if dispatched by mistake. To ship:
 
 1. On npm, configure trusted publishing for the `@teachmehipaa/node` package:
-   repository `TeachMeHIPAA/teachmehipaa-node`, workflow `release.yml`.
+   organization `TeachMeHIPAA`, repository `teachmehipaa-node`, workflow
+   `release.yml`, environment `npm`. npm only offers this once the package
+   exists, so a maintainer publishes a `0.0.0` placeholder by hand first.
 2. In one PR: remove `"private": true`, set `version` (1.0.0 for the
    first release), and move the CHANGELOG's Unreleased entry under that
    version with the date.
