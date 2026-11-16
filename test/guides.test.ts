@@ -728,7 +728,7 @@ describe("testing.md", () => {
     await runSample("testing-sandbox", fake);
 
     expect(fake.requests[0]?.url).toBe(
-      "https://api-teachmehipaa-dev.web.app/v1/auth/token",
+      "https://sandbox.api.tme.so/v1/auth/token",
     );
     expect(logged).toEqual([["test"]]);
   });

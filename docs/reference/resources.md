@@ -4,7 +4,7 @@
 
 13 resources, 45 methods, generated from Developer API release `trimmed-2026-11-15`. Types live in the [TypeDoc site](https://teachmehipaa.github.io/teachmehipaa-node/); usage lives in the [guides](../README.md).
 
-Methods return promises (lists return a `PagePromise` you can `for await`). Arguments go path parameters, then params, then [request options](../guides/errors.md#request-options). Results carry a non-enumerable `lastResponse` with `requestId`, `status` and `etag`. Routes are relative to the Environment's base URL (Live is `https://api.tme.so/v1`; Sandbox is `https://api-teachmehipaa-dev.web.app/v1`); `{orgId}` comes from the client's [Organization binding](../guides/client.md#the-organization-binding).
+Methods return promises (lists return a `PagePromise` you can `for await`). Arguments go path parameters, then params, then [request options](../guides/errors.md#request-options). Results carry a non-enumerable `lastResponse` with `requestId`, `status` and `etag`. Routes are relative to the Environment's base URL (Live is `https://api.tme.so/v1`; Sandbox is `https://sandbox.api.tme.so/v1`); `{orgId}` comes from the client's [Organization binding](../guides/client.md#the-organization-binding).
 
 ## Contents
 

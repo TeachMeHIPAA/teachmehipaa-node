@@ -66,10 +66,10 @@ A missing Scope rejects with `PermissionDeniedError` (403). The
 
 ## Environments
 
-| `environment`      | Base URL                                  |
-| ------------------ | ----------------------------------------- |
-| `"live"` (default) | `https://api.tme.so/v1`                   |
-| `"sandbox"`        | `https://api-teachmehipaa-dev.web.app/v1` |
+| `environment`      | Base URL                        |
+| ------------------ | ------------------------------- |
+| `"live"` (default) | `https://api.tme.so/v1`         |
+| `"sandbox"`        | `https://sandbox.api.tme.so/v1` |
 
 Credentials belong to one Environment and fail in the other. `baseUrl`
 replaces the URL, for a mock server or a proxy. `auth.introspect()` reports

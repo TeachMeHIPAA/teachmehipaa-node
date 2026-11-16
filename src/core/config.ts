@@ -9,7 +9,7 @@ export type Environment = "live" | "sandbox";
 
 export const ENVIRONMENT_BASE_URLS: Readonly<Record<Environment, string>> = {
   live: "https://api.tme.so/v1",
-  sandbox: "https://api-teachmehipaa-dev.web.app/v1",
+  sandbox: "https://sandbox.api.tme.so/v1",
 };
 
 interface SharedClientOptions {
