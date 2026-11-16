@@ -6,8 +6,9 @@ All notable changes to this library are documented here. It follows
 
 ## [Unreleased]
 
-The first release, to ship as 1.0.0 when the Developer API launches.
-Generated from the Developer API document release `trimmed-2026-11-15`.
+## [1.0.0] - 2026-11-16
+
+The first release. Generated from the Developer API document release `trimmed-2026-11-15`.
 
 The package is published as `@teachmehipaa/node`, under the `@teachmehipaa` npm
 scope it shares with `@teachmehipaa/mcp`. It was never published as `teachmehipaa`.

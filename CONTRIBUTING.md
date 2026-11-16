@@ -176,16 +176,13 @@ runs `npm publish` in the `npm` environment through npm trusted publishing
 (OIDC, no npm token stored in the repo). `publishConfig` sets public access
 and provenance.
 
-`package.json` keeps `"private": true` until launch, so a `publish` run
-fails at `npm publish` (`EPRIVATE`) even if dispatched by mistake. To ship:
+npm trusted publishing for `@teachmehipaa/node` is configured on npmjs.com:
+organization `TeachMeHIPAA`, repository `teachmehipaa-node`, workflow
+`release.yml`, environment `npm`. (npm only offers this once a package
+exists, so 1.0.0 was published by hand.) To ship a release:
 
-1. On npm, configure trusted publishing for the `@teachmehipaa/node` package:
-   organization `TeachMeHIPAA`, repository `teachmehipaa-node`, workflow
-   `release.yml`, environment `npm`. npm only offers this once the package
-   exists, so a maintainer publishes a `0.0.0` placeholder by hand first.
-2. In one PR: remove `"private": true`, set `version` (1.0.0 for the
-   first release), and move the CHANGELOG's Unreleased entry under that
-   version with the date.
-3. After it merges, dispatch **Release** on `main` once without `publish`
+1. In one PR: set `version` in `package.json` and `src/version.ts`, and move
+   the CHANGELOG's Unreleased entries under that version with the date.
+2. After it merges, dispatch **Release** on `main` once without `publish`
    and check the packed file list, then again with `publish` checked.
-4. Tag the release commit `v<version>`.
+3. Tag the release commit `v<version>`.

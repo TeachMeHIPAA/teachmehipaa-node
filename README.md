@@ -7,17 +7,11 @@ for Node.js 20+, with no runtime dependencies.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > [!IMPORTANT]
-> Pre-release. The Developer API is not generally available, and
-> `@teachmehipaa/node` is not on npm yet. Build it from this repository as shown
-> below. Names and behavior can change before 1.0.
 
 ## Install
 
 ```sh
-git clone https://github.com/TeachMeHIPAA/teachmehipaa-node.git
-cd teachmehipaa-node && npm ci && npm run build && npm pack
-# in your project:
-npm install ../teachmehipaa-node/teachmehipaa-node-0.0.0.tgz
+npm install @teachmehipaa/node
 ```
 
 ## Usage
