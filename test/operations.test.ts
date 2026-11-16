@@ -13,7 +13,7 @@ import { createFakeTransport } from "./support/fake-transport.js";
 import { ORG_ID, ORG, TOKEN_ROUTE, tokenReply } from "./support/fixtures.js";
 
 const OPERATION_ID = "0b7d4a8e-5c1f-4e2a-9d3b-6f8a1c2e4b7d";
-/** Research `api-sdk-surface.md` §8: `organizations/{orgId}/operations/{operationId}`. */
+/** The Developer API names operations `organizations/{orgId}/operations/{operationId}`. */
 const OPERATION_NAME = `organizations/${ORG_ID}/operations/${OPERATION_ID}`;
 const POLL_ROUTE = `GET ${ORG}/operations/${OPERATION_ID}`;
 const ENROLLMENTS_EXPORT_ROUTE = `POST ${ORG}/enrollments:export`;
@@ -22,7 +22,7 @@ const TEST_DELIVERY_ROUTE = `POST ${ORG}/webhook-subscriptions/${SUBSCRIPTION_ID
 
 /** A Test delivery's 202: pending until the webhook worker settles it. */
 const pendingBody = { name: OPERATION_NAME, done: false };
-/** The worker's settle on a 2xx from the endpoint (§8: `response._tag`). */
+/** The worker's settle on a 2xx from the endpoint (`response._tag`). */
 const sentBody = {
   name: OPERATION_NAME,
   done: true,

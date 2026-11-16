@@ -35,7 +35,7 @@ const event = (eventId: string) => ({
   },
 });
 
-/** research `api-sdk-surface.md` §4: `{ items, nextCursor }`. */
+/** The Developer API's page envelope: `{ items, nextCursor }`. */
 const pageReply = (
   items: readonly unknown[],
   nextCursor: string | null,
@@ -128,7 +128,7 @@ describe("Auto-paging lists", () => {
   });
 
   it("pages the Event log by `after`, the last Event's id, not `cursor`", async () => {
-    // §4: `nextCursor` is the last Event id while more rows exist.
+    // `nextCursor` is the last Event id while more rows exist.
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, tokenReply())
       .script(
@@ -246,7 +246,7 @@ describe("Tailing the Event log", () => {
       .script(
         EVENTS_ROUTE,
         pageReply([event("evt_03"), event("evt_04")], "evt_04"),
-        // §4: `nextCursor` is null at the current end, so it gives no
+        // `nextCursor` is null at the current end, so it gives no
         // resume point; the tail keeps the last id itself.
         pageReply([event("evt_05")], null),
       );

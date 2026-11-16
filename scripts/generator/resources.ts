@@ -43,7 +43,7 @@ export const EXTENDED_RESOURCES: ReadonlySet<string> = new Set(["events"]);
 /**
  * The type of `Operation.response` for operations that have one, by
  * operationId, from `src/core/operations.ts`. The spec leaves `response`
- * untyped (research `api-sdk-surface.md` §8).
+ * untyped.
  */
 export const OPERATION_RESPONSES: Readonly<Record<string, string>> = {
   redriveWebhookSubscription: "WebhookDeliveryResult",

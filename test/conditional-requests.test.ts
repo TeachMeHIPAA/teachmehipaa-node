@@ -15,11 +15,11 @@ const UPDATE_ROUTE = `PATCH ${ORG}/learners/${LEARNER_ID}`;
 const SUBSCRIPTION_ID = "whs_01JD8D";
 const SUBSCRIPTION_ROUTE = `PATCH ${ORG}/webhook-subscriptions/${SUBSCRIPTION_ID}`;
 
-/** Learners use a quoted SHA-256 hex strong tag (research §5). */
+/** Learners use a quoted SHA-256 hex strong tag. */
 const LEARNER_ETAG =
   '"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"';
 
-/** Rev-based resources use a quoted revision (research §5). */
+/** Rev-based resources use a quoted revision. */
 const COURSE_ETAG = '"7"';
 const COURSE_ID = "hipaa-2026";
 const COURSE_ROUTE = `GET /v1/courses/${COURSE_ID}`;

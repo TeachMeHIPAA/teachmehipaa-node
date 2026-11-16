@@ -11,10 +11,11 @@ const readJson = (path: string): unknown =>
   JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 
 /**
- * The public method for every Developer API operation: research
- * `api-sdk-surface.md` §11, with the renames settled since (grilling Q12:
- * `retrieveLinks`; the IR: `auth.introspect` and `delete` over `del`) and the
- * Q25 splits of `importEnrollments` and `batchEnrollments`.
+ * The public method for every Developer API operation, from the developer
+ * API reference and written down independently of the generator, with the
+ * renames settled since (grilling Q12: `retrieveLinks`; the IR:
+ * `auth.introspect` and `delete` over `del`) and the Q25 splits of
+ * `importEnrollments` and `batchEnrollments`.
  */
 const EXPECTED_METHODS: Readonly<Record<string, readonly string[]>> = {
   listAuditEvents: ["auditEvents.list"],

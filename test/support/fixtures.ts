@@ -11,7 +11,7 @@ export const TOKEN_ROUTE = "POST /v1/auth/token";
 export const INTROSPECTION_ROUTE = "GET /v1/auth/introspection";
 export const LEARNER_ROUTE = `GET /v1/organizations/${ORG_ID}/learners/${LEARNER_ID}`;
 
-/** `dev#/components/schemas/ClientCredentialsTokenResponse`, §2.1 example. */
+/** Shaped like `dev#/components/schemas/ClientCredentialsTokenResponse`. */
 export const tokenReply = (
   accessToken = "access-token-1",
   expiresIn = 900,
