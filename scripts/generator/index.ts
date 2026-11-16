@@ -3,6 +3,7 @@ import type { Ir } from "./ir.ts";
 import { generateModels } from "./models.ts";
 import { generateReference } from "./reference.ts";
 import { generateResources } from "./resources.ts";
+import { generateCodeSamples } from "./samples.ts";
 
 /** Directories the generator owns outright: anything else in them is stale. */
 export const GENERATED_DIRECTORIES = [
@@ -23,6 +24,7 @@ export const generate = async (
     ...generateModels(ir),
     ...generateResources(ir),
     ...generateReference(ir),
+    ...(await generateCodeSamples(ir)),
   ]);
   const formatted = await Promise.all(
     [...sources].map(async ([path, source]) => {

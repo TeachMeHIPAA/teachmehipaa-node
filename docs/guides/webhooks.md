@@ -1,14 +1,13 @@
 # Webhooks
 
-A **Webhook subscription** tells TeachMeHIPAA to POST Events of the types you
-choose, such as `learner.certified`, to your HTTPS endpoint. Each POST is a
-**Delivery**, signed with the subscription's **Signing secret** so you can
-prove it came from TeachMeHIPAA. Failed Deliveries are retried until they
-succeed or are dead-lettered.
+A Webhook subscription makes TeachMeHIPAA POST chosen Event types to your
+HTTPS endpoint. Each POST is a Delivery, signed with the subscription's
+Signing secret. Failed Deliveries are retried until they succeed or are
+dead-lettered.
 
-Samples use a `client` created as in [Getting started](getting-started.md).
+Samples that call the API use the `client` from [The client](client.md).
 
-## Create a Webhook subscription
+## Subscribe
 
 ```ts sample=webhook-subscription-create
 const subscription = await client.webhookSubscriptions.create({
@@ -20,53 +19,46 @@ console.log(subscription.subscriptionId, subscription.secretKeyId);
 await secrets.put("tmh-webhook-secret", subscription.secret);
 ```
 
-The response holds the Signing secret in `secret` **only once**: store it
-right away, in the place your handler reads it from (here `secrets` stands in
-for your secret store). Managing subscriptions needs the `webhooks:manage`
-Scope.
+`secret` appears in this response and nowhere else. Store it where your
+handler will read it (`secrets` stands for your secret store). Managing
+subscriptions needs `webhooks:manage`. `list`, `retrieve`, `update` and
+`delete` do the rest; `update` needs the ETag (see
+[Writes](writes.md#conditional-writes)), and `enabled: false` pauses
+Deliveries.
 
-`webhookSubscriptions.list`, `retrieve`, `update` and `delete` manage
-subscriptions; `update` needs the subscription's ETag (see
-[Conditional requests](conditional-requests.md)), and setting `enabled: false`
-pauses Deliveries.
+## Verify
 
-## Verify every Delivery
+`webhooks.constructEvent(rawBody, headers, secret, path, options?)` resolves
+the typed Event, or the Test delivery. It needs:
 
-`webhooks.constructEvent` verifies a Delivery and returns its Event, or the
-Test delivery. It needs four things, three of them exactly as they arrived:
+1. `rawBody`: the bytes or text as received. Re-serialized JSON never
+   verifies, so read the body before any JSON middleware parses it.
+2. `headers`: a `Headers` object or a plain object, as your framework hands
+   them over.
+3. `secret`: the subscription's Signing secret.
+4. `path`: the request path with its query string, or the full URL. The
+   signature covers it, so a wrong path fails every Delivery.
 
-1. **The raw body.** Parsed and re-serialized JSON never verifies, so read the
-   body as bytes or text before any JSON middleware touches it.
-2. **The headers.** Pass them as your framework gives them: a `Headers`
-   object or a plain object both work.
-3. **The Signing secret** of the subscription.
-4. **The request path, with its query string.** The signature covers the path
-   the Delivery was sent to, so a verifier that ignores it rejects every
-   Delivery. The full request URL works too.
+`options.tolerance` (default 300 s) bounds clock skew in both directions.
+Failures reject with `WebhookSignatureError`; answer 400 and stop. The error
+holds no body or headers, so logging it leaks no Learner data.
 
-Deliveries signed more than 5 minutes from your clock, in either direction,
-are rejected, so keep your server's clock in sync. A failed check rejects with
-`WebhookSignatureError`, whose `code` says why:
+| `code`                        | Cause                                                    |
+| ----------------------------- | -------------------------------------------------------- |
+| `missing_header`              | A signature header is absent                             |
+| `invalid_timestamp`           | `x-tmh-timestamp` isn't ISO 8601                         |
+| `body_hash_mismatch`          | The body changed after signing, usually by a JSON parser |
+| `signature_mismatch`          | Wrong secret, wrong path, or a forgery                   |
+| `timestamp_outside_tolerance` | Outside `tolerance`: a replay, or a skewed clock         |
 
-| `code`                        | Meaning                                                      |
-| ----------------------------- | ------------------------------------------------------------ |
-| `missing_header`              | A signature header is missing                                |
-| `invalid_timestamp`           | `x-tmh-timestamp` isn't an ISO 8601 date-time                |
-| `body_hash_mismatch`          | The body isn't the one that was signed (it was parsed?)      |
-| `signature_mismatch`          | Wrong secret, wrong path, or a forged Delivery               |
-| `timestamp_outside_tolerance` | Signed more than 5 minutes from now: a replay, or clock skew |
-
-Answer a `WebhookSignatureError` with 400 and do nothing else. The error never
-carries the body or headers, which hold Learner details, so it is safe to log.
-
-`webhooks` needs only the Signing secret, never API credentials, so a handler
-can import it on its own. It is also available as `client.webhooks` and
-`TeachMeHipaa.webhooks`.
+`webhooks` uses only the Signing secret and Web Crypto, so a handler can
+import it without creating a client. `client.webhooks` and
+`TeachMeHipaa.webhooks` point at the same object.
 
 ### Express
 
-Mount `express.raw` on the webhook route so the body stays a `Buffer`, and
-pass `req.originalUrl`, which keeps the mount path and query string:
+`express.raw` keeps the body a `Buffer`; `req.originalUrl` keeps the mount
+path and query string:
 
 ```ts sample=webhook-express
 import express from "express";
@@ -106,14 +98,13 @@ app.post(
 app.listen(3000);
 ```
 
-If `express.json()` runs app-wide, register the webhook route before it, or
-it will have parsed the body by the time your handler runs.
+Register the route before an app-wide `express.json()`, or the body arrives
+parsed.
 
-### Fetch-style handlers
+### Fetch handlers
 
-With a handler that takes a web `Request` (Next.js route handlers, Hono, Bun,
-Deno, Cloudflare Workers), read the body with `request.text()` and pass the
-full request URL as the path:
+Next.js route handlers, Hono, Bun, Deno and Workers all hand you a `Request`.
+Pass `request.text()` and `request.url`:
 
 ```ts sample=webhook-fetch
 import { WebhookSignatureError, webhooks } from "teachmehipaa";
@@ -141,9 +132,9 @@ export default {
 };
 ```
 
-### Node's `http` module
+### `node:http`
 
-Collect the body chunks, then verify:
+`IncomingMessage` is an async iterable of chunks:
 
 ```ts sample=webhook-node-http
 import { createServer } from "node:http";
@@ -173,20 +164,15 @@ createServer(async (req, res) => {
 }).listen(3000);
 ```
 
-## Handle Events
+## Handling Events
 
-- **Answer fast.** Return a 2xx as soon as the Delivery verifies, and do slow
-  work afterwards, such as from a queue. A Delivery that times out or fails is
-  delivered again.
-- **Expect duplicates.** A retried Delivery carries the same Event, with the
-  same `eventId`. Record the ids you've handled and skip repeats.
-- **Expect new Event types.** Event types are added over time. One this
-  version doesn't know arrives as an `UnknownEvent`, with its `eventType` and
-  `data` as sent, so your handler keeps working; ignore types you don't use.
-- **Don't rely on order.** A retried Delivery can arrive after a later one.
-  Compare `occurredAt`, or read the current state with the API.
+Return 2xx as soon as the Delivery verifies and queue slow work; a timeout
+counts as a failure and triggers a retry. Retries repeat the `eventId`, so
+deduplicate on it. Deliveries can arrive out of order: compare `occurredAt`,
+or read current state from the API. An Event type newer than your library
+version arrives as `UnknownEvent` with its `eventType` and raw `data`.
 
-Here `processedEvents` stands in for your own store of handled ids:
+`processedEvents` stands for your record of handled ids:
 
 ```ts sample=webhook-dedupe
 import { webhooks } from "teachmehipaa";
@@ -210,15 +196,14 @@ export const handleDelivery = async (
 };
 ```
 
-If your endpoint was down, `webhookSubscriptions.redrive` delivers the
-subscription's failed Events again, and the [Event log](pagination-and-events.md#the-event-log)
-has every Event of the last 30 days.
+After an outage, `webhookSubscriptions.redrive` resends the subscription's
+failed Events, and the [Event log](pagination.md#the-event-log) holds the last
+30 days.
 
 ## Test deliveries
 
-`webhookSubscriptions.test` sends a signed **Test delivery** to the
-subscription's endpoint, so you can check your verifier end to end. It
-returns an Operation; wait on it to see how the Delivery went:
+`webhookSubscriptions.test` sends a signed Test delivery to the endpoint and
+returns an Operation. Its `response` says how the Delivery went:
 
 ```ts sample=webhook-test-delivery
 const operation = await client.webhookSubscriptions.test("whs_01JD8Q");
@@ -233,18 +218,15 @@ if (result?._tag === "sent" && "responseStatus" in result) {
 }
 ```
 
-The result's `_tag` is `sent`, `failed` or `settled` (the Delivery had
-already ended), and new tags may appear, so keep the fallback branch.
+`_tag` is `sent`, `failed` or `settled` (the Delivery had already ended),
+with room for new tags. A Test delivery's body is
+`{ subscriptionId, test: true }` and carries no Event; `"test" in event`
+tells them apart.
 
-A Test delivery carries no Event: its body is `{ subscriptionId, test: true }`,
-which `constructEvent` returns as is. Check for it with `"test" in event`
-before you treat the result as an Event.
+## Signing your own payloads
 
-## Sign Deliveries in your own tests
-
-`webhooks.generateTestHeaders` returns the headers TeachMeHIPAA would send with
-a payload, so you can test your handler without a real Delivery. Sign the
-exact body and path you'll send:
+`webhooks.generateTestHeaders` produces the headers TeachMeHIPAA would send
+for a payload and path. Sign exactly the body and path you will send:
 
 ```ts sample=webhook-test-headers
 import { webhooks } from "teachmehipaa";
@@ -271,22 +253,19 @@ const event = await webhooks.constructEvent(
 console.log(event);
 ```
 
-[Testing](testing.md#test-your-webhook-handler) shows this in a handler test.
+[Testing](testing.md#webhook-handlers) puts this in a handler test.
 
-## Signature details
+## Wire format
 
-You don't need these to use `constructEvent`, but they help when debugging.
-Each Delivery carries:
+| Header             | Value                                     |
+| ------------------ | ----------------------------------------- |
+| `x-tmh-signature`  | Hex HMAC-SHA256 of the canonical string   |
+| `x-tmh-timestamp`  | Signing time, ISO 8601                    |
+| `x-tmh-body-hash`  | Hex SHA-256 of the body                   |
+| `x-tmh-event-id`   | The Event id (a UUID for a Test delivery) |
+| `x-tmh-event-type` | The Event type                            |
+| `x-tmh-key-id`     | The Signing secret that signed it         |
 
-| Header             | Holds                                       |
-| ------------------ | ------------------------------------------- |
-| `x-tmh-signature`  | Hex HMAC-SHA256 of the canonical string     |
-| `x-tmh-timestamp`  | When it was signed, ISO 8601                |
-| `x-tmh-body-hash`  | Hex SHA-256 of the body                     |
-| `x-tmh-event-id`   | The Event's id (a UUID for a Test delivery) |
-| `x-tmh-event-type` | The Event type                              |
-| `x-tmh-key-id`     | Which Signing secret signed it              |
-
-The canonical string is `POST`, the path with its query string, the
-timestamp and the body hash, joined by newlines. The HMAC key is the Signing
-secret's UTF-8 bytes, used as is (not base64-decoded).
+The canonical string joins `POST`, the path with its query string, the
+timestamp and the body hash with `\n`. The HMAC key is the secret's UTF-8
+bytes, not base64-decoded.

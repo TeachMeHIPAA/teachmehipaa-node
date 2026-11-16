@@ -26,7 +26,7 @@ npx tsx examples/quickstart.ts
 
 The examples import `"teachmehipaa"` by name, which inside this repository
 resolves to the build in `dist/`. In your own project, install the package
-first (see [Getting started](../docs/guides/getting-started.md)) and copy an
+first (see the [README](../README.md#install)) and copy an
 example in.
 
 `webhook-server.ts` also needs `TMH_WEBHOOK_SECRET`, the Signing secret of a

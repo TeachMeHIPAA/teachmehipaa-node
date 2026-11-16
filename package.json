@@ -34,7 +34,7 @@
   ],
   "scripts": {
     "build": "tsup",
-    "check:dist": "node scripts/check-dist.mjs && TMH_README_TYPES=dist vitest run test/readme.test.ts test/guides.test.ts -t \"type-checks every sample\"",
+    "check:dist": "node scripts/check-dist.mjs && TMH_README_TYPES=dist vitest run test/readme.test.ts test/guides.test.ts test/code-samples.test.ts -t \"type-checks every sample\"",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.examples.json",
     "docs": "typedoc",
     "lint": "eslint . && prettier --check .",
