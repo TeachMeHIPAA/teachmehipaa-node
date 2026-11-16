@@ -153,9 +153,22 @@ export interface IrResource {
   readonly methods: readonly IrMethod[];
 }
 
+export interface IrScope {
+  readonly name: string;
+  readonly description: string | null;
+}
+
+export interface IrServer {
+  readonly environment: "live" | "sandbox";
+  readonly url: string;
+  readonly description: string | null;
+}
+
 export interface Ir {
   readonly irVersion: number;
   readonly source: { readonly release: string; readonly sha256: string };
+  readonly auth: { readonly scopes: readonly IrScope[] };
+  readonly servers: readonly IrServer[];
   readonly resources: readonly IrResource[];
   readonly types: readonly IrType[];
 }

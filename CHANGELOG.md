@@ -63,3 +63,22 @@ Generated from the Developer API document release `trimmed-2026-11-15`.
   your `appInfo`, and a pluggable `fetch` or `transport`.
 - ESM and CommonJS builds with TypeScript declarations, for Node.js 20 and
   newer, Bun and Deno. No runtime dependencies and no telemetry.
+
+### Documentation
+
+- Guides in `docs/guides/`: getting started, authentication, errors and
+  retries, pagination and the Event log, webhooks, Operations and files,
+  conditional requests, testing, configuration and versioning. Every
+  TypeScript sample in them and in the README is type-checked and, where it
+  can run, run against a fake transport by the test suite.
+- `docs/reference/resources.md`, generated from the SDK IR by
+  `npm run generate`: every resource and method with its signature, HTTP
+  route, Scopes, retry and idempotency behavior, and return type.
+- An API reference built with TypeDoc (`npm run docs`), which fails on any
+  warning, built for every pull request and published to GitHub Pages from
+  `main`.
+- Runnable examples in `examples/`: a quickstart, a roster sync by External
+  ID, an Express webhook endpoint and a Certificate export. CI type-checks
+  them.
+- A shorter README that links to the guides, and `docs/README.md`, an index
+  of all documentation.

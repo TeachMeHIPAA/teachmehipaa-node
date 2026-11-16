@@ -231,6 +231,16 @@ interface MethodSource {
   readonly params: string;
   readonly method: string;
   readonly exports: readonly string[];
+  readonly signature: MethodSignature;
+}
+
+/** A method as the API reference shows it. */
+export interface MethodSignature {
+  /** Each parameter, e.g. `learnerId: string`, `options?: RequestOptions`. */
+  readonly parameters: readonly string[];
+  readonly returnType: string;
+  /** What sets the call apart, such as its `ifMatch` rule, if anything. */
+  readonly note: string | null;
 }
 
 const paramField = (param: IrParam, imports: Imports): string =>
@@ -585,23 +595,27 @@ const methodSource = (
   const requestOptions = imports.core("request-options", style.options);
   // The API answers 428 without If-Match, so the type demands it.
   const optionsRequired = method.ifMatch === "required";
-  /** The parameter list, with `options` required or optional. */
+  /** The parameters, with `options` required or optional. */
+  const parametersWith = (
+    options: string,
+    required = false,
+  ): readonly string[] => [
+    ...method.pathParams.map(
+      (param) => `${param.name}: ${renderType(param.type, imports)}`,
+    ),
+    ...(hasParams
+      ? [
+          paramsRequired
+            ? `params: ${typeName}`
+            : required
+              ? `params: ${typeName} | undefined`
+              : `params?: ${typeName}`,
+        ]
+      : []),
+    `options${required ? "" : "?"}: ${options}`,
+  ];
   const signatureWith = (options: string, required = false): string =>
-    [
-      ...method.pathParams.map(
-        (param) => `${param.name}: ${renderType(param.type, imports)}`,
-      ),
-      ...(hasParams
-        ? [
-            paramsRequired
-              ? `params: ${typeName}`
-              : required
-                ? `params: ${typeName} | undefined`
-                : `params?: ${typeName}`,
-          ]
-        : []),
-      `options${required ? "" : "?"}: ${options}`,
-    ].join(", ");
+    parametersWith(options, required).join(", ");
 
   const spec = requestSpec(method, params, destructure, where);
   const { returnType, call, trailing, overloads } = responseShape(
@@ -620,6 +634,11 @@ const methodSource = (
     params: params.declaration,
     method: source,
     exports: hasParams ? [typeName] : [],
+    signature: {
+      parameters: parametersWith(requestOptions, optionsRequired),
+      returnType,
+      note: style.note,
+    },
   };
 };
 
@@ -745,6 +764,37 @@ ${children.assignments.join("\n")}
 }
 }
 `;
+};
+
+/** A resource in client order, with each method as generated. */
+export interface ResourceSignatures {
+  readonly path: readonly string[];
+  readonly methods: readonly {
+    readonly method: IrMethod;
+    readonly signature: MethodSignature;
+  }[];
+}
+
+/**
+ * Every resource that has methods, in the order the client exposes them,
+ * with the TypeScript signature the generator writes for each method.
+ */
+export const resourceSignatures = (ir: Ir): readonly ResourceSignatures[] => {
+  const context = new Context(ir);
+  return flatten(resourceTree(ir.resources))
+    .filter((node) => node.methods.length > 0)
+    .map((node) => {
+      const resource: IrResource = { path: node.path, methods: node.methods };
+      // The signatures only need the rendered type names, not the imports.
+      const imports = new Imports();
+      return {
+        path: node.path,
+        methods: node.methods.map((method) => ({
+          method,
+          signature: methodSource(context, resource, method, imports).signature,
+        })),
+      };
+    });
 };
 
 /**

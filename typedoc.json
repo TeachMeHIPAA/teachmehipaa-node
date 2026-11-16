@@ -1,0 +1,35 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "TeachMeHIPAA Node.js Library",
+  "entryPoints": ["src/index.ts"],
+  "out": "site",
+  "readme": "README.md",
+  "projectDocuments": [
+    "docs/guides/getting-started.md",
+    "docs/guides/authentication.md",
+    "docs/guides/errors-and-retries.md",
+    "docs/guides/pagination-and-events.md",
+    "docs/guides/webhooks.md",
+    "docs/guides/operations-and-files.md",
+    "docs/guides/conditional-requests.md",
+    "docs/guides/testing.md",
+    "docs/guides/configuration.md",
+    "docs/guides/versioning.md",
+    "docs/reference/resources.md",
+    "examples/README.md"
+  ],
+  "plugin": [
+    "typedoc-plugin-missing-exports",
+    "./scripts/typedoc-document-titles.mjs"
+  ],
+  "placeInternalsInOwningModule": true,
+  "excludeExternals": true,
+  "treatWarningsAsErrors": true,
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "invalidPath": true,
+    "rewrittenLink": true,
+    "unusedMergeModuleWith": true
+  }
+}

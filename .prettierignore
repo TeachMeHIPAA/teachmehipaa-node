@@ -1,6 +1,10 @@
 dist/
 coverage/
-docs/
+docs/adr/
+docs/agents/
+docs/design/
+docs/research/
+site/
 package-lock.json
 openapi/
 test/readme/.generated/

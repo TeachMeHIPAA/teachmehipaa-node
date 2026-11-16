@@ -29,13 +29,18 @@ const fakes = (): Fakes => {
 };
 
 // `fetch` and `transport` are exclusive, so a sample's own `fetch` gives way
-// to the fake.
-const withFakes = <T extends object>(options: T): T & Fakes => ({
-  ...(Object.fromEntries(
-    Object.entries(options).filter(([name]) => name !== "fetch"),
-  ) as T),
-  ...fakes(),
-});
+// to the fake. A sample that brings its own transport (the testing guide's)
+// keeps it, since that transport is what it shows.
+const withFakes = (options: TeachMeHipaaOptions): TeachMeHipaaOptions => {
+  const { transport, clock } = fakes();
+  return {
+    ...(Object.fromEntries(
+      Object.entries(options).filter(([name]) => name !== "fetch"),
+    ) as TeachMeHipaaOptions),
+    transport: options.transport ?? transport,
+    clock,
+  };
+};
 
 export class TeachMeHipaa extends RealTeachMeHipaa {
   constructor(options: TeachMeHipaaOptions) {

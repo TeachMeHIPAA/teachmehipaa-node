@@ -4,7 +4,13 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["dist/", "coverage/", "node_modules/", "test/readme/.generated/"],
+    ignores: [
+      "dist/",
+      "coverage/",
+      "node_modules/",
+      "site/",
+      "test/readme/.generated/",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
@@ -15,6 +21,17 @@ export default tseslint.config(
           allowDefaultProject: ["eslint.config.js", "scripts/*.mjs"],
         },
         tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
+    // The examples import "teachmehipaa" by name, which only their own
+    // tsconfig maps to the source.
+    files: ["examples/**/*.ts"],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: "./tsconfig.examples.json",
       },
     },
   },
