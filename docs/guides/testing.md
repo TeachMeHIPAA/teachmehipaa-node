@@ -1,11 +1,9 @@
 # Testing
 
-## Use the Sandbox
+## A Sandbox client
 
-The **Sandbox** Environment is a separate TeachMeHIPAA deployment for
-development and tests. Learners there are never emailed, so you can create,
-invite and offboard freely. Create a separate API client for it in the
-console; Live credentials never work in the Sandbox, or the other way round.
+The Sandbox is a separate deployment where Learners never get email. It needs
+its own API client; Live credentials fail there, and the reverse.
 
 ```ts sample=testing-sandbox
 import TeachMeHipaa from "teachmehipaa";
@@ -20,15 +18,14 @@ const token = await client.auth.introspect();
 console.log(token.mode);
 ```
 
-`auth.introspect` reports `mode: "test"` for a Sandbox token, which makes a
-cheap check that a test suite isn't pointed at Live.
+`auth.introspect` returns `mode: "test"` for a Sandbox token. Assert on it in
+a suite's setup to catch Live credentials early.
 
-## Fake the transport in unit tests
+## A fake `transport`
 
-The client sends every request through a **transport**: a function that takes
-the request the library built and resolves a `Response`. Pass your own as
-`transport` to test your code without the network. It sees every request,
-the token request included, so it can assert on what your code sent:
+Every request, the token request included, goes through `transport`: a
+function from `TransportRequest` to `Promise<Response>`. Replace it and no
+request leaves the process:
 
 ```ts sample=testing-fake-transport
 import TeachMeHipaa, {
@@ -70,31 +67,23 @@ const summary = await client.compliance.retrieve();
 console.log(summary.compliantRate, sent.length);
 ```
 
-Tips for tests:
+- A token provider that returns a fixed string, as above, or
+  `staticTokenProvider("test-token")`, keeps token requests out of the fake.
+- `organizationId` skips the `auth.introspect` lookup.
+- `maxRetries: 0` surfaces a scripted failure on the first attempt.
+- A `clock` whose `sleep` resolves at once makes backoff and `wait()` polling
+  instant. It has two methods: `now()` and `sleep(ms)`.
+- Resolve error statuses as `Response`s. Reject only to simulate a dropped
+  connection, which the client raises as `ConnectionError`.
 
-- A **token provider** that returns a fixed token, as above, keeps token
-  requests out of your fakes. `staticTokenProvider("test-token")` does the
-  same.
-- Pass **`organizationId`** so the client doesn't introspect the token to find
-  the Organization.
-- Set **`maxRetries: 0`** to see a scripted failure at once, instead of after
-  the client's retries and backoff.
-- A **`clock`** option replaces real time: `now()` and `sleep(ms)`. A fake
-  clock that returns from `sleep` at once makes retry backoff and
-  `Operation.wait()` polling instant.
-- The transport resolves error statuses as responses; reject only to simulate
-  a network failure, which the client raises as `ConnectionError`.
+To keep the real HTTP handling and change only how bytes leave, such as for
+mTLS, pass `fetch` instead (see [The client](client.md#custom-fetch)).
 
-The transport also suits a proxy or mTLS. To keep the built-in HTTP handling
-and only change how requests leave, pass a `fetch` instead (see
-[Configuration](configuration.md)).
+## A mock server
 
-## Run against a mock server
-
-To check your requests against the Developer API's OpenAPI document, point
-the client at a mock server, such as [Prism](https://stoplight.io/open-source/prism),
-with `baseUrl`. Mock servers usually can't issue Access tokens, so give the
-client a static token and its Organization:
+Point `baseUrl` at a mock of the OpenAPI document, such as
+[Prism](https://stoplight.io/open-source/prism). Mocks can't mint Access
+tokens, so pass a static token and the Organization:
 
 ```ts sample=testing-mock-server
 import TeachMeHipaa, { staticTokenProvider } from "teachmehipaa";
@@ -109,12 +98,12 @@ const page = await client.learners.list({ limit: 5 });
 console.log(page.items.length);
 ```
 
-## Test your webhook handler
+## Webhook handlers
 
-`webhooks.generateTestHeaders` signs a payload the way TeachMeHIPAA does. Use
-it to send your handler a Delivery it should accept, and tampered ones it
-should refuse. This test drives a fetch-style handler like the one in
-[Webhooks](webhooks.md#fetch-style-handlers):
+`webhooks.generateTestHeaders` signs a payload as TeachMeHIPAA does. Send
+your handler one Delivery it should accept and one it should reject. This
+drives a handler shaped like the
+[fetch handler](webhooks.md#fetch-handlers) in the webhooks guide:
 
 ```ts sample=testing-webhook-handler
 import { WebhookSignatureError, webhooks } from "teachmehipaa";
@@ -155,7 +144,6 @@ const forged = await handle(
 console.log(accepted.status, forged.status, await forged.text());
 ```
 
-Sign exactly the body and path you send: a different path, or a body that
-differs by one byte, fails verification just as it would in production. Pass
-`timestamp` to sign as of another time, such as to test that your handler
-rejects stale Deliveries.
+A different path, or a body one byte off, fails here as it would in
+production. `timestamp` signs as of another time, to test that stale
+Deliveries get rejected.

@@ -11,6 +11,10 @@ Generated from the Developer API document release `trimmed-2026-11-15`.
 
 ### Added
 
+- `docs/reference/code-samples.json`, generated with the resource reference:
+  one type-checked program per API operation for the TeachMeHIPAA API
+  reference. The guides are regrouped into eight (client, errors, writes,
+  pagination, operations, webhooks, testing, compatibility).
 - `TeachMeHipaa` client for all 44 Developer API operations, as resources and
   typed models generated from the shared SDK IR: Learners, Enrollments,
   Certificates, Certificate verifications, Compliance, Courses, Members,

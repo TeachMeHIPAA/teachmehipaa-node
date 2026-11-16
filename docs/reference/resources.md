@@ -1,10 +1,10 @@
-<!-- Generated from openapi/sdk-ir.json — do not edit. Run `npm run generate`. -->
+<!-- Generated from openapi/sdk-ir.json by `npm run generate`. Edit the generator, not this file. -->
 
-# API resources
+# Resource reference
 
-Every resource and method of the `TeachMeHipaa` client: 13 resources and 45 methods, generated from the Developer API release `trimmed-2026-11-15`. For the full types, see the [API reference](https://teachmehipaa.github.io/teachmehipaa-node/); for how the pieces fit together, the [guides](../README.md).
+13 resources, 45 methods, generated from Developer API release `trimmed-2026-11-15`. Types live in the [TypeDoc site](https://teachmehipaa.github.io/teachmehipaa-node/); usage lives in the [guides](../README.md).
 
-Every method is async, takes its parameters first and [request options](../guides/errors-and-retries.md#request-options) last, and resolves objects with a non-enumerable `lastResponse`. Paths are relative to the Environment's base URL (Live is `https://api.tme.so/v1`; Sandbox is `https://api-teachmehipaa-dev.web.app/v1`). The client fills in `{orgId}` from its [Organization binding](../guides/authentication.md#the-organization-binding).
+Methods return promises (lists return a `PagePromise` you can `for await`). Arguments go path parameters, then params, then [request options](../guides/errors.md#request-options). Results carry a non-enumerable `lastResponse` with `requestId`, `status` and `etag`. Routes are relative to the Environment's base URL (Live is `https://api.tme.so/v1`; Sandbox is `https://api-teachmehipaa-dev.web.app/v1`); `{orgId}` comes from the client's [Organization binding](../guides/client.md#the-organization-binding).
 
 ## Contents
 
@@ -24,7 +24,7 @@ Every method is async, takes its parameters first and [request options](../guide
 
 ## Scopes
 
-An Access token carries the Scopes its API client holds, or fewer if you pass `scopes`. A method that lists several sets needs any one of them. See [Authentication](../guides/authentication.md#scopes).
+A token holds its API client's Scopes, or the subset you name in `scopes`. Where a method lists alternatives, one set is enough. See [Scopes](../guides/client.md#scopes).
 
 | Scope               | Allows                                                            |
 | ------------------- | ----------------------------------------------------------------- |
@@ -53,13 +53,13 @@ client.auditEvents.list(
 ): PagePromise<AuditEvent>
 ```
 
-|             |                                                        |
-| ----------- | ------------------------------------------------------ |
-| HTTP        | `GET /organizations/{orgId}/audit-events`              |
-| Scopes      | `audit:read`                                           |
-| Returns     | `PagePromise<AuditEvent>`                              |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx |
-| Idempotency | None                                                   |
+|             |                                           |
+| ----------- | ----------------------------------------- |
+| HTTP        | `GET /organizations/{orgId}/audit-events` |
+| Scopes      | `audit:read`                              |
+| Returns     | `PagePromise<AuditEvent>`                 |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx  |
+| Idempotency | None                                      |
 
 ## `auth`
 
@@ -75,13 +75,13 @@ client.auth.introspect(
 ): Promise<WithLastResponse<TokenIntrospection>>
 ```
 
-|             |                                                        |
-| ----------- | ------------------------------------------------------ |
-| HTTP        | `GET /auth/introspection`                              |
-| Scopes      | Any Access token                                       |
-| Returns     | `Promise<WithLastResponse<TokenIntrospection>>`        |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx |
-| Idempotency | None                                                   |
+|             |                                                 |
+| ----------- | ----------------------------------------------- |
+| HTTP        | `GET /auth/introspection`                       |
+| Scopes      | Any Access token                                |
+| Returns     | `Promise<WithLastResponse<TokenIntrospection>>` |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx        |
+| Idempotency | None                                            |
 
 ## `certificateVerifications`
 
@@ -98,13 +98,13 @@ client.certificateVerifications.retrieve(
 ): Promise<WithLastResponse<CertificateVerification>>
 ```
 
-|             |                                                        |
-| ----------- | ------------------------------------------------------ |
-| HTTP        | `GET /certificate-verifications/{tinyId}`              |
-| Scopes      | None: a public method, sent without an Access token    |
-| Returns     | `Promise<WithLastResponse<CertificateVerification>>`   |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx |
-| Idempotency | None                                                   |
+|             |                                                      |
+| ----------- | ---------------------------------------------------- |
+| HTTP        | `GET /certificate-verifications/{tinyId}`            |
+| Scopes      | None (public, no Access token)                       |
+| Returns     | `Promise<WithLastResponse<CertificateVerification>>` |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx             |
+| Idempotency | None                                                 |
 
 ## `certificates`
 
@@ -126,7 +126,7 @@ client.certificates.downloadPdf(
 | HTTP        | `GET /organizations/{orgId}/certificates/{certId}/content`                                               |
 | Scopes      | `certificates:read`                                                                                      |
 | Returns     | `Promise<WithLastResponse<BinaryResponse \| BinaryStreamResponse>>`                                      |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                                   |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                                                 |
 | Idempotency | None                                                                                                     |
 | Notes       | Resolves with the whole file in `data`, or with `asStream: true`, as a web `ReadableStream` in `stream`. |
 
@@ -143,14 +143,14 @@ client.certificates.export(
 ): Promise<Operation>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/certificates:export`                                                   |
-| Scopes      | `certificates:read`                                                                                 |
-| Returns     | `Promise<Operation>`                                                                                |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
-| Notes       | Resolves with an Operation; `await operation.wait()` for its final state.                           |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/certificates:export`                             |
+| Scopes      | `certificates:read`                                                           |
+| Returns     | `Promise<Operation>`                                                          |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
+| Notes       | Resolves with an Operation; `await operation.wait()` for its final state.     |
 
 ### `certificates.list`
 
@@ -165,13 +165,13 @@ client.certificates.list(
 ): PagePromise<Certificate>
 ```
 
-|             |                                                        |
-| ----------- | ------------------------------------------------------ |
-| HTTP        | `GET /organizations/{orgId}/certificates`              |
-| Scopes      | `certificates:read`                                    |
-| Returns     | `PagePromise<Certificate>`                             |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx |
-| Idempotency | None                                                   |
+|             |                                           |
+| ----------- | ----------------------------------------- |
+| HTTP        | `GET /organizations/{orgId}/certificates` |
+| Scopes      | `certificates:read`                       |
+| Returns     | `PagePromise<Certificate>`                |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx  |
+| Idempotency | None                                      |
 
 ### `certificates.retrieve`
 
@@ -186,13 +186,13 @@ client.certificates.retrieve(
 ): Promise<WithLastResponse<Certificate>>
 ```
 
-|             |                                                        |
-| ----------- | ------------------------------------------------------ |
-| HTTP        | `GET /organizations/{orgId}/certificates/{certId}`     |
-| Scopes      | `certificates:read`                                    |
-| Returns     | `Promise<WithLastResponse<Certificate>>`               |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx |
-| Idempotency | None                                                   |
+|             |                                                    |
+| ----------- | -------------------------------------------------- |
+| HTTP        | `GET /organizations/{orgId}/certificates/{certId}` |
+| Scopes      | `certificates:read`                                |
+| Returns     | `Promise<WithLastResponse<Certificate>>`           |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx           |
+| Idempotency | None                                               |
 
 ### `certificates.retrieveLinks`
 
@@ -212,7 +212,7 @@ client.certificates.retrieveLinks(
 | HTTP        | `GET /organizations/{orgId}/certificates/{certId}/credentials` |
 | Scopes      | `certificates:read`                                            |
 | Returns     | `Promise<WithLastResponse<CertificateLinks>>`                  |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx         |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                       |
 | Idempotency | None                                                           |
 
 ## `compliance`
@@ -230,13 +230,13 @@ client.compliance.retrieve(
 ): Promise<WithLastResponse<ComplianceSummary>>
 ```
 
-|             |                                                        |
-| ----------- | ------------------------------------------------------ |
-| HTTP        | `GET /organizations/{orgId}/compliance`                |
-| Scopes      | `compliance:read`                                      |
-| Returns     | `Promise<WithLastResponse<ComplianceSummary>>`         |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx |
-| Idempotency | None                                                   |
+|             |                                                |
+| ----------- | ---------------------------------------------- |
+| HTTP        | `GET /organizations/{orgId}/compliance`        |
+| Scopes      | `compliance:read`                              |
+| Returns     | `Promise<WithLastResponse<ComplianceSummary>>` |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx       |
+| Idempotency | None                                           |
 
 ## `courses`
 
@@ -253,13 +253,13 @@ client.courses.list(
 ): PagePromise<Course>
 ```
 
-|             |                                                        |
-| ----------- | ------------------------------------------------------ |
-| HTTP        | `GET /courses`                                         |
-| Scopes      | None: a public method, sent without an Access token    |
-| Returns     | `PagePromise<Course>`                                  |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx |
-| Idempotency | None                                                   |
+|             |                                          |
+| ----------- | ---------------------------------------- |
+| HTTP        | `GET /courses`                           |
+| Scopes      | None (public, no Access token)           |
+| Returns     | `PagePromise<Course>`                    |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx |
+| Idempotency | None                                     |
 
 ### `courses.retrieve`
 
@@ -277,9 +277,9 @@ client.courses.retrieve(
 |             |                                                                                                                                                        |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | HTTP        | `GET /courses/{courseId}`                                                                                                                              |
-| Scopes      | None: a public method, sent without an Access token                                                                                                    |
+| Scopes      | None (public, no Access token)                                                                                                                         |
 | Returns     | `Promise<WithLastResponse<Course> \| NotModified>`                                                                                                     |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                                                                                 |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                                                                                               |
 | Idempotency | None                                                                                                                                                   |
 | Notes       | Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`. |
 
@@ -298,13 +298,13 @@ client.enrollments.batch(
 ): Promise<WithLastResponse<EnrollmentsBatchResults>>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/enrollments:batch`                                                     |
-| Scopes      | `enrollments:write`                                                                                 |
-| Returns     | `Promise<WithLastResponse<EnrollmentsBatchResults>>`                                                |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/enrollments:batch`                               |
+| Scopes      | `enrollments:write`                                                           |
+| Returns     | `Promise<WithLastResponse<EnrollmentsBatchResults>>`                          |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
 
 ### `enrollments.batchByFilter`
 
@@ -319,14 +319,14 @@ client.enrollments.batchByFilter(
 ): Promise<Operation>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/enrollments:batch`                                                     |
-| Scopes      | `enrollments:write`                                                                                 |
-| Returns     | `Promise<Operation>`                                                                                |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
-| Notes       | Resolves with an Operation; `await operation.wait()` for its final state.                           |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/enrollments:batch`                               |
+| Scopes      | `enrollments:write`                                                           |
+| Returns     | `Promise<Operation>`                                                          |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
+| Notes       | Resolves with an Operation; `await operation.wait()` for its final state.     |
 
 ### `enrollments.cancel`
 
@@ -342,13 +342,13 @@ client.enrollments.cancel(
 ): Promise<WithLastResponse<CancelEnrollmentResponse>>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/enrollments/{enrollmentId}:cancel`                                     |
-| Scopes      | `enrollments:write`                                                                                 |
-| Returns     | `Promise<WithLastResponse<CancelEnrollmentResponse>>`                                               |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/enrollments/{enrollmentId}:cancel`               |
+| Scopes      | `enrollments:write`                                                           |
+| Returns     | `Promise<WithLastResponse<CancelEnrollmentResponse>>`                         |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
 
 ### `enrollments.create`
 
@@ -363,13 +363,13 @@ client.enrollments.create(
 ): Promise<WithLastResponse<Enrollment>>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/enrollments`                                                           |
-| Scopes      | `enrollments:write`                                                                                 |
-| Returns     | `Promise<WithLastResponse<Enrollment>>`                                                             |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/enrollments`                                     |
+| Scopes      | `enrollments:write`                                                           |
+| Returns     | `Promise<WithLastResponse<Enrollment>>`                                       |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
 
 ### `enrollments.export`
 
@@ -384,14 +384,14 @@ client.enrollments.export(
 ): Promise<Operation>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/enrollments:export`                                                    |
-| Scopes      | `enrollments:read`                                                                                  |
-| Returns     | `Promise<Operation>`                                                                                |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
-| Notes       | Resolves with an Operation; `await operation.wait()` for its final state.                           |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/enrollments:export`                              |
+| Scopes      | `enrollments:read`                                                            |
+| Returns     | `Promise<Operation>`                                                          |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
+| Notes       | Resolves with an Operation; `await operation.wait()` for its final state.     |
 
 ### `enrollments.import`
 
@@ -406,14 +406,14 @@ client.enrollments.import(
 ): Promise<Operation>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/enrollments:import`                                                    |
-| Scopes      | `enrollments:write`                                                                                 |
-| Returns     | `Promise<Operation>`                                                                                |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
-| Notes       | Resolves with an Operation; `await operation.wait()` for its final state.                           |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/enrollments:import`                              |
+| Scopes      | `enrollments:write`                                                           |
+| Returns     | `Promise<Operation>`                                                          |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
+| Notes       | Resolves with an Operation; `await operation.wait()` for its final state.     |
 
 ### `enrollments.list`
 
@@ -428,13 +428,13 @@ client.enrollments.list(
 ): PagePromise<OrgEnrollmentListItem>
 ```
 
-|             |                                                        |
-| ----------- | ------------------------------------------------------ |
-| HTTP        | `GET /organizations/{orgId}/enrollments`               |
-| Scopes      | `enrollments:read`                                     |
-| Returns     | `PagePromise<OrgEnrollmentListItem>`                   |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx |
-| Idempotency | None                                                   |
+|             |                                          |
+| ----------- | ---------------------------------------- |
+| HTTP        | `GET /organizations/{orgId}/enrollments` |
+| Scopes      | `enrollments:read`                       |
+| Returns     | `PagePromise<OrgEnrollmentListItem>`     |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx |
+| Idempotency | None                                     |
 
 ### `enrollments.previewImport`
 
@@ -449,13 +449,13 @@ client.enrollments.previewImport(
 ): Promise<WithLastResponse<ImportPreview>>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/enrollments:import`                                                    |
-| Scopes      | `enrollments:write`                                                                                 |
-| Returns     | `Promise<WithLastResponse<ImportPreview>>`                                                          |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/enrollments:import`                              |
+| Scopes      | `enrollments:write`                                                           |
+| Returns     | `Promise<WithLastResponse<ImportPreview>>`                                    |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
 
 ### `enrollments.remind`
 
@@ -470,13 +470,13 @@ client.enrollments.remind(
 ): Promise<WithLastResponse<EnrollmentActionAccepted>>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/enrollments/{enrollmentId}:remind`                                     |
-| Scopes      | `enrollments:write`                                                                                 |
-| Returns     | `Promise<WithLastResponse<EnrollmentActionAccepted>>`                                               |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/enrollments/{enrollmentId}:remind`               |
+| Scopes      | `enrollments:write`                                                           |
+| Returns     | `Promise<WithLastResponse<EnrollmentActionAccepted>>`                         |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
 
 ### `enrollments.renew`
 
@@ -491,13 +491,13 @@ client.enrollments.renew(
 ): Promise<WithLastResponse<Enrollment>>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/enrollments/{enrollmentId}:renew`                                      |
-| Scopes      | `enrollments:write`                                                                                 |
-| Returns     | `Promise<WithLastResponse<Enrollment>>`                                                             |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/enrollments/{enrollmentId}:renew`                |
+| Scopes      | `enrollments:write`                                                           |
+| Returns     | `Promise<WithLastResponse<Enrollment>>`                                       |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
 
 ### `enrollments.resendInvite`
 
@@ -512,13 +512,13 @@ client.enrollments.resendInvite(
 ): Promise<WithLastResponse<EnrollmentActionAccepted>>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/enrollments/{enrollmentId}:resendInvite`                               |
-| Scopes      | `enrollments:write`                                                                                 |
-| Returns     | `Promise<WithLastResponse<EnrollmentActionAccepted>>`                                               |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/enrollments/{enrollmentId}:resendInvite`         |
+| Scopes      | `enrollments:write`                                                           |
+| Returns     | `Promise<WithLastResponse<EnrollmentActionAccepted>>`                         |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
 
 ### `enrollments.retrieve`
 
@@ -538,13 +538,13 @@ client.enrollments.retrieve(
 | HTTP        | `GET /organizations/{orgId}/enrollments/{enrollmentId}`                                                                                                |
 | Scopes      | `enrollments:read`                                                                                                                                     |
 | Returns     | `Promise<WithLastResponse<Enrollment> \| NotModified>`                                                                                                 |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                                                                                 |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                                                                                               |
 | Idempotency | None                                                                                                                                                   |
 | Notes       | Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`. |
 
 ## `events`
 
-`events.tail(params?, options?)` is hand-written on top of `events.list`: it iterates the Event log oldest first and keeps its position in `lastEventId`. See [Pagination and the Event log](../guides/pagination-and-events.md#tailing-the-event-log).
+Plus `events.tail(params?, options?)`, hand-written over `events.list`: an async iterator over the Event log, oldest first, that tracks its position in `lastEventId` and stops on an `AbortSignal`. See [Tailing the Event log](../guides/pagination.md#tailing-the-event-log).
 
 ### `events.list`
 
@@ -559,13 +559,13 @@ client.events.list(
 ): PagePromise<Event>
 ```
 
-|             |                                                        |
-| ----------- | ------------------------------------------------------ |
-| HTTP        | `GET /organizations/{orgId}/events`                    |
-| Scopes      | `webhooks:manage` or `audit:read`                      |
-| Returns     | `PagePromise<Event>`                                   |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx |
-| Idempotency | None                                                   |
+|             |                                          |
+| ----------- | ---------------------------------------- |
+| HTTP        | `GET /organizations/{orgId}/events`      |
+| Scopes      | `webhooks:manage` or `audit:read`        |
+| Returns     | `PagePromise<Event>`                     |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx |
+| Idempotency | None                                     |
 
 ## `learners`
 
@@ -582,14 +582,14 @@ client.learners.batchUpsert(
 ): Promise<Operation>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/learners:batchUpsert`                                                  |
-| Scopes      | `learners:write`                                                                                    |
-| Returns     | `Promise<Operation>`                                                                                |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
-| Notes       | Resolves with an Operation; `await operation.wait()` for its final state.                           |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/learners:batchUpsert`                            |
+| Scopes      | `learners:write`                                                              |
+| Returns     | `Promise<Operation>`                                                          |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
+| Notes       | Resolves with an Operation; `await operation.wait()` for its final state.     |
 
 ### `learners.create`
 
@@ -604,13 +604,13 @@ client.learners.create(
 ): Promise<WithLastResponse<LearnerWriteResult>>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/learners`                                                              |
-| Scopes      | `learners:write`                                                                                    |
-| Returns     | `Promise<WithLastResponse<LearnerWriteResult>>`                                                     |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/learners`                                        |
+| Scopes      | `learners:write`                                                              |
+| Returns     | `Promise<WithLastResponse<LearnerWriteResult>>`                               |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
 
 ### `learners.createLaunchLink`
 
@@ -631,7 +631,7 @@ client.learners.createLaunchLink(
 | HTTP        | `POST /organizations/{orgId}/learners/{learnerId}:createLaunchLink` |
 | Scopes      | `learners:write`                                                    |
 | Returns     | `Promise<WithLastResponse<LearnerLaunchLink>>`                      |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx              |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                            |
 | Idempotency | None                                                                |
 
 ### `learners.export`
@@ -647,14 +647,14 @@ client.learners.export(
 ): Promise<Operation>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/learners:export`                                                       |
-| Scopes      | `learners:read`                                                                                     |
-| Returns     | `Promise<Operation>`                                                                                |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
-| Notes       | Resolves with an Operation; `await operation.wait()` for its final state.                           |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/learners:export`                                 |
+| Scopes      | `learners:read`                                                               |
+| Returns     | `Promise<Operation>`                                                          |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
+| Notes       | Resolves with an Operation; `await operation.wait()` for its final state.     |
 
 ### `learners.list`
 
@@ -669,13 +669,13 @@ client.learners.list(
 ): PagePromise<Learner>
 ```
 
-|             |                                                        |
-| ----------- | ------------------------------------------------------ |
-| HTTP        | `GET /organizations/{orgId}/learners`                  |
-| Scopes      | `learners:read`                                        |
-| Returns     | `PagePromise<Learner>`                                 |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx |
-| Idempotency | None                                                   |
+|             |                                          |
+| ----------- | ---------------------------------------- |
+| HTTP        | `GET /organizations/{orgId}/learners`    |
+| Scopes      | `learners:read`                          |
+| Returns     | `PagePromise<Learner>`                   |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx |
+| Idempotency | None                                     |
 
 ### `learners.offboard`
 
@@ -696,8 +696,8 @@ client.learners.offboard(
 | HTTP        | `POST /organizations/{orgId}/learners/{learnerId}:offboard`                                                           |
 | Scopes      | `learners:write`                                                                                                      |
 | Returns     | `Promise<WithLastResponse<Learner>>`                                                                                  |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                                                |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own                   |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                                                              |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it                                         |
 | Notes       | Pass `ifMatch` to make the call conditional on the object's ETag; a stale one raises `PreconditionFailedError` (412). |
 
 ### `learners.remind`
@@ -714,13 +714,13 @@ client.learners.remind(
 ): Promise<WithLastResponse<LearnerRemindAccepted>>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/learners/{learnerId}:remind`                                           |
-| Scopes      | `learners:write`                                                                                    |
-| Returns     | `Promise<WithLastResponse<LearnerRemindAccepted>>`                                                  |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/learners/{learnerId}:remind`                     |
+| Scopes      | `learners:write`                                                              |
+| Returns     | `Promise<WithLastResponse<LearnerRemindAccepted>>`                            |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
 
 ### `learners.retrieve`
 
@@ -736,13 +736,13 @@ client.learners.retrieve(
 ): Promise<WithLastResponse<Learner>>
 ```
 
-|             |                                                        |
-| ----------- | ------------------------------------------------------ |
-| HTTP        | `GET /organizations/{orgId}/learners/{learnerId}`      |
-| Scopes      | `learners:read`                                        |
-| Returns     | `Promise<WithLastResponse<Learner>>`                   |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx |
-| Idempotency | None                                                   |
+|             |                                                   |
+| ----------- | ------------------------------------------------- |
+| HTTP        | `GET /organizations/{orgId}/learners/{learnerId}` |
+| Scopes      | `learners:read`                                   |
+| Returns     | `Promise<WithLastResponse<Learner>>`              |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx          |
+| Idempotency | None                                              |
 
 ### `learners.update`
 
@@ -763,7 +763,7 @@ client.learners.update(
 | HTTP        | `PATCH /organizations/{orgId}/learners/{learnerId}`                                                                                                                                                                 |
 | Scopes      | `learners:write`                                                                                                                                                                                                    |
 | Returns     | `Promise<WithLastResponse<Learner>>`                                                                                                                                                                                |
-| Retries     | Never retried: replaying it isn't safe                                                                                                                                                                              |
+| Retries     | Never (unsafe to replay)                                                                                                                                                                                            |
 | Idempotency | None                                                                                                                                                                                                                |
 | Notes       | Pass the object's current ETag as `ifMatch`, such as the object you read: `{ ifMatch: object }`. Without it the API refuses the write with `PreconditionFailedError` (428); with a stale one, the same error (412). |
 
@@ -781,13 +781,13 @@ client.learners.upsertByExternalId(
 ): Promise<WithLastResponse<LearnerWriteResult>>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `PUT /organizations/{orgId}/learners/by-external-id/{externalId}`                                   |
-| Scopes      | `learners:write`                                                                                    |
-| Returns     | `Promise<WithLastResponse<LearnerWriteResult>>`                                                     |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `PUT /organizations/{orgId}/learners/by-external-id/{externalId}`             |
+| Scopes      | `learners:write`                                                              |
+| Returns     | `Promise<WithLastResponse<LearnerWriteResult>>`                               |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
 
 ## `members`
 
@@ -804,13 +804,13 @@ client.members.list(
 ): PagePromise<MemberListItem>
 ```
 
-|             |                                                        |
-| ----------- | ------------------------------------------------------ |
-| HTTP        | `GET /organizations/{orgId}/members`                   |
-| Scopes      | `members:read`                                         |
-| Returns     | `PagePromise<MemberListItem>`                          |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx |
-| Idempotency | None                                                   |
+|             |                                          |
+| ----------- | ---------------------------------------- |
+| HTTP        | `GET /organizations/{orgId}/members`     |
+| Scopes      | `members:read`                           |
+| Returns     | `PagePromise<MemberListItem>`            |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx |
+| Idempotency | None                                     |
 
 ### `members.retrieve`
 
@@ -825,13 +825,13 @@ client.members.retrieve(
 ): Promise<WithLastResponse<Member>>
 ```
 
-|             |                                                        |
-| ----------- | ------------------------------------------------------ |
-| HTTP        | `GET /organizations/{orgId}/members/{subjectId}`       |
-| Scopes      | `members:read`                                         |
-| Returns     | `Promise<WithLastResponse<Member>>`                    |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx |
-| Idempotency | None                                                   |
+|             |                                                  |
+| ----------- | ------------------------------------------------ |
+| HTTP        | `GET /organizations/{orgId}/members/{subjectId}` |
+| Scopes      | `members:read`                                   |
+| Returns     | `Promise<WithLastResponse<Member>>`              |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx         |
+| Idempotency | None                                             |
 
 ## `operations`
 
@@ -853,7 +853,7 @@ client.operations.retrieve(
 | HTTP        | `GET /organizations/{orgId}/operations/{operationId}`                     |
 | Scopes      | Any Access token                                                          |
 | Returns     | `Promise<Operation>`                                                      |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                    |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                  |
 | Idempotency | None                                                                      |
 | Notes       | Resolves with an Operation; `await operation.wait()` for its final state. |
 
@@ -871,13 +871,13 @@ client.seats.retrieve(
 ): Promise<WithLastResponse<SeatsInventory>>
 ```
 
-|             |                                                        |
-| ----------- | ------------------------------------------------------ |
-| HTTP        | `GET /organizations/{orgId}/seats`                     |
-| Scopes      | `enrollments:read`                                     |
-| Returns     | `Promise<WithLastResponse<SeatsInventory>>`            |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx |
-| Idempotency | None                                                   |
+|             |                                             |
+| ----------- | ------------------------------------------- |
+| HTTP        | `GET /organizations/{orgId}/seats`          |
+| Scopes      | `enrollments:read`                          |
+| Returns     | `Promise<WithLastResponse<SeatsInventory>>` |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx    |
+| Idempotency | None                                        |
 
 ## `webhookSubscriptions`
 
@@ -894,13 +894,13 @@ client.webhookSubscriptions.create(
 ): Promise<WithLastResponse<WebhookSubscriptionCreated>>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/webhook-subscriptions`                                                 |
-| Scopes      | `org:admin` or `webhooks:manage`                                                                    |
-| Returns     | `Promise<WithLastResponse<WebhookSubscriptionCreated>>`                                             |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/webhook-subscriptions`                           |
+| Scopes      | `org:admin` or `webhooks:manage`                                              |
+| Returns     | `Promise<WithLastResponse<WebhookSubscriptionCreated>>`                       |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
 
 ### `webhookSubscriptions.delete`
 
@@ -920,7 +920,7 @@ client.webhookSubscriptions.delete(
 | HTTP        | `DELETE /organizations/{orgId}/webhook-subscriptions/{subscriptionId}` |
 | Scopes      | `org:admin` or `webhooks:manage`                                       |
 | Returns     | `Promise<EmptyResponse>`                                               |
-| Retries     | Never retried: replaying it isn't safe                                 |
+| Retries     | Never (unsafe to replay)                                               |
 | Idempotency | None                                                                   |
 
 ### `webhookSubscriptions.list`
@@ -936,13 +936,13 @@ client.webhookSubscriptions.list(
 ): PagePromise<WebhookSubscription>
 ```
 
-|             |                                                        |
-| ----------- | ------------------------------------------------------ |
-| HTTP        | `GET /organizations/{orgId}/webhook-subscriptions`     |
-| Scopes      | `org:admin` or `webhooks:manage`                       |
-| Returns     | `PagePromise<WebhookSubscription>`                     |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx |
-| Idempotency | None                                                   |
+|             |                                                    |
+| ----------- | -------------------------------------------------- |
+| HTTP        | `GET /organizations/{orgId}/webhook-subscriptions` |
+| Scopes      | `org:admin` or `webhooks:manage`                   |
+| Returns     | `PagePromise<WebhookSubscription>`                 |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx           |
+| Idempotency | None                                               |
 
 ### `webhookSubscriptions.redrive`
 
@@ -957,14 +957,14 @@ client.webhookSubscriptions.redrive(
 ): Promise<Operation<WebhookDeliveryResult>>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/webhook-subscriptions/{subscriptionId}:redrive`                        |
-| Scopes      | `org:admin` or `webhooks:manage`                                                                    |
-| Returns     | `Promise<Operation<WebhookDeliveryResult>>`                                                         |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
-| Notes       | Resolves with an Operation; `await operation.wait()` for its final state.                           |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/webhook-subscriptions/{subscriptionId}:redrive`  |
+| Scopes      | `org:admin` or `webhooks:manage`                                              |
+| Returns     | `Promise<Operation<WebhookDeliveryResult>>`                                   |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
+| Notes       | Resolves with an Operation; `await operation.wait()` for its final state.     |
 
 ### `webhookSubscriptions.retrieve`
 
@@ -984,7 +984,7 @@ client.webhookSubscriptions.retrieve(
 | HTTP        | `GET /organizations/{orgId}/webhook-subscriptions/{subscriptionId}`                                                                                    |
 | Scopes      | `org:admin` or `webhooks:manage`                                                                                                                       |
 | Returns     | `Promise<WithLastResponse<WebhookSubscription> \| NotModified>`                                                                                        |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                                                                                 |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                                                                                               |
 | Idempotency | None                                                                                                                                                   |
 | Notes       | Pass the ETag of the copy you hold as `ifNoneMatch` (or the copy itself) to skip the transfer when it's current: the call then resolves `NotModified`. |
 
@@ -1001,14 +1001,14 @@ client.webhookSubscriptions.test(
 ): Promise<Operation<WebhookDeliveryResult>>
 ```
 
-|             |                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| HTTP        | `POST /organizations/{orgId}/webhook-subscriptions/{subscriptionId}:test`                           |
-| Scopes      | `org:admin` or `webhooks:manage`                                                                    |
-| Returns     | `Promise<Operation<WebhookDeliveryResult>>`                                                         |
-| Retries     | Retried on network errors, 409 `conflict`, 429 and 5xx                                              |
-| Idempotency | Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own |
-| Notes       | Resolves with an Operation; `await operation.wait()` for its final state.                           |
+|             |                                                                               |
+| ----------- | ----------------------------------------------------------------------------- |
+| HTTP        | `POST /organizations/{orgId}/webhook-subscriptions/{subscriptionId}:test`     |
+| Scopes      | `org:admin` or `webhooks:manage`                                              |
+| Returns     | `Promise<Operation<WebhookDeliveryResult>>`                                   |
+| Retries     | Network errors, 409 `conflict`, 429, 5xx                                      |
+| Idempotency | Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it |
+| Notes       | Resolves with an Operation; `await operation.wait()` for its final state.     |
 
 ### `webhookSubscriptions.update`
 
@@ -1029,6 +1029,6 @@ client.webhookSubscriptions.update(
 | HTTP        | `PATCH /organizations/{orgId}/webhook-subscriptions/{subscriptionId}`                                                                                                                                               |
 | Scopes      | `org:admin` or `webhooks:manage`                                                                                                                                                                                    |
 | Returns     | `Promise<WithLastResponse<WebhookSubscription>>`                                                                                                                                                                    |
-| Retries     | Never retried: replaying it isn't safe                                                                                                                                                                              |
+| Retries     | Never (unsafe to replay)                                                                                                                                                                                            |
 | Idempotency | None                                                                                                                                                                                                                |
 | Notes       | Pass the object's current ETag as `ifMatch`, such as the object you read: `{ ifMatch: object }`. Without it the API refuses the write with `PreconditionFailedError` (428); with a stale one, the same error (412). |
