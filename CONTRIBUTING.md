@@ -95,8 +95,17 @@ can't run (it touches the disk or starts a server) is listed in
 creating it gets a Sandbox client bound to `org_acme` prepended; names that
 stand for the reader's own code, such as `cursors`, are declared in the
 harness's `PLACEHOLDERS`. To add a sample, give it an id and add a
-`runs(...)` case or a `TYPE_CHECKED_ONLY` entry. Shell blocks are not
+`runs(...)` case or a `TYPE_CHECKED_ONLY` entry. A ` ```js sample=<id> `
+block is CommonJS: `npm run check:dist` runs it against the build, with a
+`fetch` that answers every request with a Course. Shell blocks are not
 tested.
+
+`docs/reference/code-samples.json` comes from the table in
+`scripts/generator/samples.ts`: one program per IR operationId, using the
+example values every TeachMeHIPAA SDK shares. The generator fails when an
+operationId has no sample or a sample calls the wrong method, and
+`test/code-samples.test.ts` type-checks each program against `src/` (and
+against `dist/` under `check:dist`).
 
 ### Contract suite
 
@@ -127,14 +136,15 @@ Environment. It never writes, and CI never runs it.
 
 ## Documentation
 
-| Path                          | What it is                                  | Kept in sync by                                |
-| ----------------------------- | ------------------------------------------- | ---------------------------------------------- |
-| `README.md`                   | Overview, install, quickstart, links        | `test/readme.test.ts`                          |
-| `docs/guides/*.md`            | Task guides                                 | `test/guides.test.ts`                          |
-| `docs/reference/resources.md` | Every resource and method, from the IR      | `npm run generate`; the generated-surface test |
-| `docs/README.md`              | Index of all documentation                  | Hand-written                                   |
-| `examples/*.ts`               | Runnable programs against the Sandbox       | `npm run typecheck` (`tsconfig.examples.json`) |
-| TypeDoc site                  | The API reference, from the TSDoc in `src/` | `npm run docs` in the Docs workflow            |
+| Path                               | What it is                                                    | Kept in sync by                                                  |
+| ---------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `README.md`                        | Overview, install, quickstart, links                          | `test/readme.test.ts`                                            |
+| `docs/guides/*.md`                 | Task guides                                                   | `test/guides.test.ts`                                            |
+| `docs/reference/resources.md`      | Every resource and method, from the IR                        | `npm run generate`; the generated-surface test                   |
+| `docs/reference/code-samples.json` | One program per operationId, for the monorepo's API reference | `npm run generate`; `test/code-samples.test.ts` type-checks each |
+| `docs/README.md`                   | Index of all documentation                                    | Hand-written                                                     |
+| `examples/*.ts`                    | Runnable programs against the Sandbox                         | `npm run typecheck` (`tsconfig.examples.json`)                   |
+| TypeDoc site                       | The API reference, from the TSDoc in `src/`                   | `npm run docs` in the Docs workflow                              |
 
 When you change the public interface, update the guide that covers it; the
 doc tests fail if a sample no longer compiles or behaves as shown. Write for

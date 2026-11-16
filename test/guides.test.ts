@@ -91,36 +91,18 @@ describe("Guides", () => {
   checksEverySample(TYPE_CHECKED_ONLY);
 });
 
-describe("getting-started.md", () => {
-  runs("getting-started-first-call", async () => {
-    const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, tokenReply())
-      .script(INTROSPECTION_ROUTE, introspectionReply())
-      .script(`GET ${ORG}/compliance`, {
-        json: {
-          asOf: "2026-11-15T12:00:00.000Z",
-          courseId: "hipaa-2026",
-          totals: { learners: 2, compliant: 1 },
-          compliantRate: 0.5,
-        },
-      });
-
-    await runSample("getting-started-first-call", fake);
-
-    expect(logged).toEqual([[1, "of", 2, "compliant"]]);
-  });
-
-  runs("getting-started-invite", async () => {
+describe("writes.md: create or upsert", () => {
+  runs("writes-create", async () => {
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, tokenReply())
       .script(`POST ${ORG}/learners`, { status: 201, json: learnerBody });
 
-    await runSample("getting-started-invite", fake);
+    await runSample("writes-create", fake);
 
     expect(logged).toEqual([[LEARNER_ID, "invited"]]);
   });
 
-  runs("getting-started-upsert", async () => {
+  runs("writes-upsert", async () => {
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, tokenReply())
       .script(`PUT ${ORG}/learners/by-external-id/hr-123`, {
@@ -128,7 +110,7 @@ describe("getting-started.md", () => {
         json: learnerBody,
       });
 
-    await runSample("getting-started-upsert", fake);
+    await runSample("writes-upsert", fake);
 
     const [upsert] = fake.requestsTo(
       `PUT ${ORG}/learners/by-external-id/hr-123`,
@@ -140,12 +122,12 @@ describe("getting-started.md", () => {
     expect(logged).toEqual([[LEARNER_ID, false]]);
   });
 
-  runs("getting-started-errors", async () => {
+  runs("writes-seat-policy", async () => {
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, tokenReply())
       .script(`POST ${ORG}/learners`, problem(409, "seat_unavailable"));
 
-    await runSample("getting-started-errors", fake);
+    await runSample("writes-seat-policy", fake);
 
     const [create] = fake.requestsTo(`POST ${ORG}/learners`);
     expect(JSON.parse(textBody(create))).toEqual({
@@ -156,7 +138,7 @@ describe("getting-started.md", () => {
   });
 });
 
-describe("authentication.md", () => {
+describe("client.md: credentials", () => {
   runs("auth-client-credentials", async () => {
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, tokenReply())
@@ -237,7 +219,7 @@ describe("authentication.md", () => {
   });
 });
 
-describe("errors-and-retries.md", () => {
+describe("errors.md and writes.md: errors, request options", () => {
   runs("errors", async () => {
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, tokenReply())
@@ -291,7 +273,7 @@ describe("errors-and-retries.md", () => {
   });
 });
 
-describe("pagination-and-events.md", () => {
+describe("pagination.md", () => {
   runs("pagination", async () => {
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, tokenReply())
@@ -550,7 +532,7 @@ describe("webhooks.md", () => {
   });
 });
 
-describe("operations-and-files.md", () => {
+describe("operations.md", () => {
   runs("operations", async () => {
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, tokenReply())
@@ -660,7 +642,7 @@ describe("operations-and-files.md", () => {
   });
 });
 
-describe("conditional-requests.md", () => {
+describe("writes.md: ETags and merge patches", () => {
   runs("conditional-write", async () => {
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, tokenReply())
@@ -782,7 +764,7 @@ describe("testing.md", () => {
   });
 });
 
-describe("configuration.md", () => {
+describe("client.md and errors.md: options", () => {
   runs("configuration", async () => {
     await runSample("configuration", createFakeTransport());
 
@@ -839,13 +821,19 @@ describe("configuration.md", () => {
   });
 });
 
-describe("versioning.md", () => {
-  runs("versioning-open-enums", async () => {
+describe("compatibility.md", () => {
+  runs("esm-imports", async () => {
+    await runSample("esm-imports", createFakeTransport());
+
+    expect(logged).toEqual([["function", "function", "object"]]);
+  });
+
+  runs("open-enums", async () => {
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, tokenReply())
       .script(LEARNER_ROUTE, { json: { ...learnerBody, status: "on_leave" } });
 
-    await runSample("versioning-open-enums", fake);
+    await runSample("open-enums", fake);
 
     expect(logged).toEqual([["needs attention:", "on_leave"]]);
   });

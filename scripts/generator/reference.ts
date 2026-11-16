@@ -4,7 +4,7 @@ import { resourceSignatures, type ResourceSignatures } from "./resources.ts";
 export const REFERENCE_PATH = "docs/reference/resources.md";
 
 const BANNER =
-  "<!-- Generated from openapi/sdk-ir.json — do not edit. Run `npm run generate`. -->";
+  "<!-- Generated from openapi/sdk-ir.json by `npm run generate`. Edit the generator, not this file. -->";
 
 /**
  * Public methods with no operation of their own, which the IR can't
@@ -12,7 +12,7 @@ const BANNER =
  */
 const HAND_WRITTEN_METHODS: Readonly<Record<string, string>> = {
   events:
-    "`events.tail(params?, options?)` is hand-written on top of `events.list`: it iterates the Event log oldest first and keeps its position in `lastEventId`. See [Pagination and the Event log](../guides/pagination-and-events.md#tailing-the-event-log).",
+    "Plus `events.tail(params?, options?)`, hand-written over `events.list`: an async iterator over the Event log, oldest first, that tracks its position in `lastEventId` and stops on an `AbortSignal`. See [Tailing the Event log](../guides/pagination.md#tailing-the-event-log).",
 };
 
 const code = (text: string): string => `\`${text}\``;
@@ -23,7 +23,7 @@ const anchor = (heading: string): string =>
 
 const scopes = (security: IrSecurity): string => {
   if (security.kind === "none") {
-    return "None: a public method, sent without an Access token";
+    return "None (public, no Access token)";
   }
   const sets = security.anyOf.map((set) =>
     set.length === 0 ? null : set.map(code).join(" and "),
@@ -43,9 +43,9 @@ const httpRoute = (method: IrMethod): string => {
 const idempotency = (method: IrMethod): string => {
   switch (method.idempotencyKey) {
     case "required":
-      return "Sends a generated `Idempotency-Key`, the same on every retry; pass `idempotencyKey` to set your own";
+      return "Generated `Idempotency-Key`, reused on retries; `idempotencyKey` overrides it";
     case "optional":
-      return "Sends an `Idempotency-Key` only when you pass `idempotencyKey`";
+      return "`Idempotency-Key` only when you pass `idempotencyKey`";
     case "none":
       return "None";
   }
@@ -53,8 +53,8 @@ const idempotency = (method: IrMethod): string => {
 
 const retries = (method: IrMethod): string =>
   method.retrySafe
-    ? "Retried on network errors, 409 `conflict`, 429 and 5xx"
-    : "Never retried: replaying it isn't safe";
+    ? "Network errors, 409 `conflict`, 429, 5xx"
+    : "Never (unsafe to replay)";
 
 /** Table cells can't hold a raw pipe. */
 const cell = (text: string): string => text.replaceAll("|", "\\|");
@@ -139,13 +139,13 @@ export const generateReference = (ir: Ir): ReadonlyMap<string, string> => {
   });
   const markdown = [
     BANNER,
-    "# API resources",
-    `Every resource and method of the ${code("TeachMeHipaa")} client: ${String(resources.length)} resources and ${String(methodCount)} methods, generated from the Developer API release ${code(ir.source.release)}. For the full types, see the [API reference](https://teachmehipaa.github.io/teachmehipaa-node/); for how the pieces fit together, the [guides](../README.md).`,
-    `Every method is async, takes its parameters first and [request options](../guides/errors-and-retries.md#request-options) last, and resolves objects with a non-enumerable ${code("lastResponse")}. Paths are relative to the Environment's base URL (${servers}). The client fills in ${code("{orgId}")} from its [Organization binding](../guides/authentication.md#the-organization-binding).`,
+    "# Resource reference",
+    `${String(resources.length)} resources, ${String(methodCount)} methods, generated from Developer API release ${code(ir.source.release)}. Types live in the [TypeDoc site](https://teachmehipaa.github.io/teachmehipaa-node/); usage lives in the [guides](../README.md).`,
+    `Methods return promises (lists return a ${code("PagePromise")} you can ${code("for await")}). Arguments go path parameters, then params, then [request options](../guides/errors.md#request-options). Results carry a non-enumerable ${code("lastResponse")} with ${code("requestId")}, ${code("status")} and ${code("etag")}. Routes are relative to the Environment's base URL (${servers}); ${code("{orgId}")} comes from the client's [Organization binding](../guides/client.md#the-organization-binding).`,
     "## Contents",
     contents.join("\n"),
     "## Scopes",
-    `An Access token carries the Scopes its API client holds, or fewer if you pass ${code("scopes")}. A method that lists several sets needs any one of them. See [Authentication](../guides/authentication.md#scopes).`,
+    `A token holds its API client's Scopes, or the subset you name in ${code("scopes")}. Where a method lists alternatives, one set is enough. See [Scopes](../guides/client.md#scopes).`,
     scopeTable(ir),
     ...resources.map(resourceSection),
   ].join("\n\n");
