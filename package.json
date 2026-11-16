@@ -1,5 +1,5 @@
 {
-  "name": "@teachmehipaa/node",
+  "name": "teachmehipaa",
   "version": "1.0.0",
   "description": "Official Node.js and TypeScript library for the TeachMeHIPAA Developer API",
   "license": "MIT",

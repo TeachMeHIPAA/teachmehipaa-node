@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "paths": { "@teachmehipaa/node": ["./src/index.ts"] }
+    "paths": { "teachmehipaa": ["./src/index.ts"] }
   },
   "include": ["examples"]
 }

@@ -88,7 +88,7 @@ guide in `docs/guides/` honest, through the harness in
 `test/readme/harness.ts`. Every TypeScript block must carry an id in its info
 string, as in ` ```ts sample=quickstart `, unique within its test file. The
 tests type-check every sample with the repo's compiler settings, and run each
-runnable sample against the fake transport, with `"@teachmehipaa/node"` pointing at
+runnable sample against the fake transport, with `"teachmehipaa"` pointing at
 `test/readme/runtime.ts`, then check what it printed and sent. A sample that
 can't run (it touches the disk or starts a server) is listed in
 `TYPE_CHECKED_ONLY` with the reason. A sample that uses `client` without
@@ -176,7 +176,7 @@ runs `npm publish` in the `npm` environment through npm trusted publishing
 (OIDC, no npm token stored in the repo). `publishConfig` sets public access
 and provenance.
 
-npm trusted publishing for `@teachmehipaa/node` is configured on npmjs.com:
+npm trusted publishing for `teachmehipaa` is configured on npmjs.com:
 organization `TeachMeHIPAA`, repository `teachmehipaa-node`, workflow
 `release.yml`, environment `npm`. (npm only offers this once a package
 exists, so 1.0.0 was published by hand.) To ship a release:

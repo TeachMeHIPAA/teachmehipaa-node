@@ -47,7 +47,7 @@ export const samplesIn = (file: string): readonly Sample[] =>
  * the harness creates it, bound to an Organization so no lookup is
  * scripted.
  */
-const PRELUDE = `import __TeachMeHipaa from "@teachmehipaa/node";
+const PRELUDE = `import __TeachMeHipaa from "teachmehipaa";
 const client = new __TeachMeHipaa({
   clientId: process.env.TMH_CLIENT_ID!,
   clientSecret: process.env.TMH_CLIENT_SECRET!,
@@ -84,7 +84,7 @@ export {};
 
 /**
  * Type-checks samples with the repo's compiler settings, resolving
- * "@teachmehipaa/node" to the source entry point, or with `TMH_README_TYPES=dist`
+ * "teachmehipaa" to the source entry point, or with `TMH_README_TYPES=dist`
  * to the built declarations (as `npm run check:dist` does).
  */
 export const typeErrors = (samples: readonly Sample[]): readonly string[] => {
@@ -112,7 +112,7 @@ export const typeErrors = (samples: readonly Sample[]): readonly string[] => {
     noUnusedLocals: false,
     noUnusedParameters: false,
     baseUrl: ROOT,
-    paths: { "@teachmehipaa/node": [types] },
+    paths: { teachmehipaa: [types] },
   };
   const host = ts.createCompilerHost(compilerOptions);
   const readFile = host.readFile.bind(host);
@@ -171,7 +171,7 @@ export interface SampleSuite {
 /**
  * Sets up a test file for the samples of `files`. Vitest only transforms
  * TypeScript it loads from disk, so runnable samples are written under
- * `test/readme/.generated/<name>/` (git-ignored) with "@teachmehipaa/node"
+ * `test/readme/.generated/<name>/` (git-ignored) with "teachmehipaa"
  * pointing at the runtime shim.
  */
 export const sampleSuite = (
@@ -220,7 +220,7 @@ export const sampleSuite = (
     writeFileSync(
       file,
       moduleSource(sampleById(id)).replaceAll(
-        /from "@teachmehipaa\/node"/g,
+        /from "teachmehipaa"/g,
         `from "../../runtime.js"`,
       ),
     );

@@ -1,7 +1,7 @@
 // Syncs a roster from your own system into the Sandbox Organization, keyed
 // by External ID, then lists Learners who are no longer on it.
 // Run: npx tsx examples/sync-roster.ts
-import TeachMeHipaa, { TeachMeHipaaError } from "@teachmehipaa/node";
+import TeachMeHipaa, { TeachMeHipaaError } from "teachmehipaa";
 
 const requireEnv = (name: string): string => {
   const value = process.env[name];

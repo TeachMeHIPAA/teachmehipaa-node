@@ -10,9 +10,6 @@ All notable changes to this library are documented here. It follows
 
 The first release. Generated from the Developer API document release `trimmed-2026-11-15`.
 
-The package is published as `@teachmehipaa/node`, under the `@teachmehipaa` npm
-scope it shares with `@teachmehipaa/mcp`. It was never published as `teachmehipaa`.
-
 ### Added
 
 - `docs/reference/code-samples.json`, generated with the resource reference:

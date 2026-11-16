@@ -1,7 +1,7 @@
 # The client
 
 ```ts sample=auth-client-credentials
-import TeachMeHipaa from "@teachmehipaa/node";
+import TeachMeHipaa from "teachmehipaa";
 
 const client = new TeachMeHipaa({
   clientId: process.env.TMH_CLIENT_ID!,
@@ -35,7 +35,7 @@ The token carries every Scope the API client holds. A process that only
 reads can ask for less:
 
 ```ts sample=auth-scopes
-import TeachMeHipaa from "@teachmehipaa/node";
+import TeachMeHipaa from "teachmehipaa";
 
 const reader = new TeachMeHipaa({
   clientId: process.env.TMH_CLIENT_ID!,
@@ -82,7 +82,7 @@ Organization id. The client calls `auth.introspect` once to learn it. Pass
 `organizationId` when you already know it and the lookup never happens:
 
 ```ts sample=organization
-import TeachMeHipaa from "@teachmehipaa/node";
+import TeachMeHipaa from "teachmehipaa";
 
 const client = new TeachMeHipaa({
   clientId: process.env.TMH_CLIENT_ID!,
@@ -100,7 +100,7 @@ console.log(compliance.lastResponse.requestId);
 token you minted elsewhere:
 
 ```ts sample=auth-static-token
-import TeachMeHipaa, { staticTokenProvider } from "@teachmehipaa/node";
+import TeachMeHipaa, { staticTokenProvider } from "teachmehipaa";
 
 const client = new TeachMeHipaa({
   tokenProvider: staticTokenProvider(process.env.TMH_ACCESS_TOKEN!),
@@ -123,7 +123,7 @@ A static token never renews; after it expires, calls reject with
 send no Access token. A client without credentials can call those three:
 
 ```ts sample=public-lookups
-import TeachMeHipaa from "@teachmehipaa/node";
+import TeachMeHipaa from "teachmehipaa";
 
 const client = new TeachMeHipaa({ environment: "sandbox" });
 
@@ -140,7 +140,7 @@ Any other method on it rejects with a `TypeError` before sending. Passing
 ## Options
 
 ```ts sample=configuration
-import TeachMeHipaa from "@teachmehipaa/node";
+import TeachMeHipaa from "teachmehipaa";
 
 const client = new TeachMeHipaa({
   clientId: process.env.TMH_CLIENT_ID!,
@@ -187,7 +187,7 @@ A `fetch` you pass carries every request, the token request included, while
 the client keeps handling tokens, retries and errors:
 
 ```ts sample=configuration-fetch
-import TeachMeHipaa from "@teachmehipaa/node";
+import TeachMeHipaa from "teachmehipaa";
 
 const client = new TeachMeHipaa({
   clientId: process.env.TMH_CLIENT_ID!,
@@ -210,7 +210,7 @@ The library prints nothing on its own. A `logger` gets one `debug` entry per
 HTTP response, token requests included:
 
 ```ts sample=logging
-import TeachMeHipaa from "@teachmehipaa/node";
+import TeachMeHipaa from "teachmehipaa";
 
 const client = new TeachMeHipaa({
   clientId: process.env.TMH_CLIENT_ID!,

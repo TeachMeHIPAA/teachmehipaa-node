@@ -36,7 +36,7 @@ An Operation's `name` identifies it. Store it, and fetch the Operation later
 with `operations.retrieve`. `jobs` stands for your storage:
 
 ```ts sample=operations-resume
-import { operationIdFromName } from "@teachmehipaa/node";
+import { operationIdFromName } from "teachmehipaa";
 
 const started = await client.certificates.export({ format: "csv" });
 await jobs.save(started.name);

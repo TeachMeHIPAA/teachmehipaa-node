@@ -1,6 +1,6 @@
 // Prints the Sandbox Organization's Compliance summary and its first few
 // Learners. Run: npx tsx examples/quickstart.ts
-import TeachMeHipaa from "@teachmehipaa/node";
+import TeachMeHipaa from "teachmehipaa";
 
 const requireEnv = (name: string): string => {
   const value = process.env[name];

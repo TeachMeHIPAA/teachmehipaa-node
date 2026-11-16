@@ -3,10 +3,7 @@
 // Run: npx tsx examples/webhook-server.ts, then point a Webhook subscription
 // at http(s)://<your host>/webhooks/tmh (for example through a tunnel).
 import express from "express";
-import TeachMeHipaa, {
-  WebhookSignatureError,
-  webhooks,
-} from "@teachmehipaa/node";
+import TeachMeHipaa, { WebhookSignatureError, webhooks } from "teachmehipaa";
 
 const requireEnv = (name: string): string => {
   const value = process.env[name];

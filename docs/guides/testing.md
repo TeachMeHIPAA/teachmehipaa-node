@@ -6,7 +6,7 @@ The Sandbox is a separate deployment where Learners never get email. It needs
 its own API client; Live credentials fail there, and the reverse.
 
 ```ts sample=testing-sandbox
-import TeachMeHipaa from "@teachmehipaa/node";
+import TeachMeHipaa from "teachmehipaa";
 
 const client = new TeachMeHipaa({
   clientId: process.env.TMH_SANDBOX_CLIENT_ID!,
@@ -31,7 +31,7 @@ request leaves the process:
 import TeachMeHipaa, {
   type Transport,
   type TransportRequest,
-} from "@teachmehipaa/node";
+} from "teachmehipaa";
 
 const sent: TransportRequest[] = [];
 const transport: Transport = async (request) => {
@@ -86,7 +86,7 @@ Point `baseUrl` at a mock of the OpenAPI document, such as
 tokens, so pass a static token and the Organization:
 
 ```ts sample=testing-mock-server
-import TeachMeHipaa, { staticTokenProvider } from "@teachmehipaa/node";
+import TeachMeHipaa, { staticTokenProvider } from "teachmehipaa";
 
 const client = new TeachMeHipaa({
   baseUrl: "http://127.0.0.1:4010/v1",
@@ -106,7 +106,7 @@ drives a handler shaped like the
 [fetch handler](webhooks.md#fetch-handlers) in the webhooks guide:
 
 ```ts sample=testing-webhook-handler
-import { WebhookSignatureError, webhooks } from "@teachmehipaa/node";
+import { WebhookSignatureError, webhooks } from "teachmehipaa";
 
 const secret = "test-signing-secret";
 

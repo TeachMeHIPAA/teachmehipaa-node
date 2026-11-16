@@ -353,10 +353,9 @@ const firstMethods = (ir: Ir): ReadonlyMap<string, string> =>
 
 const source = (spec: SampleSpec): string =>
   [
-    [
-      ...(spec.imports ?? []),
-      `import TeachMeHipaa from "@teachmehipaa/node";`,
-    ].join("\n"),
+    [...(spec.imports ?? []), `import TeachMeHipaa from "teachmehipaa";`].join(
+      "\n",
+    ),
     spec.public === true ? PUBLIC_CLIENT : CLIENT,
     spec.body,
   ].join("\n\n");

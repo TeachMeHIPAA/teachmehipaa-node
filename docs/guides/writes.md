@@ -35,7 +35,7 @@ roster through it.
 catch:
 
 ```ts sample=writes-seat-policy
-import { ConflictError, TeachMeHipaaError } from "@teachmehipaa/node";
+import { ConflictError, TeachMeHipaaError } from "teachmehipaa";
 
 try {
   await client.learners.create({
@@ -96,7 +96,7 @@ The types enforce the required ones. A stale ETag rejects with
 matches any version.
 
 ```ts sample=conditional-write
-import { PreconditionFailedError } from "@teachmehipaa/node";
+import { PreconditionFailedError } from "teachmehipaa";
 
 const learner = await client.learners.retrieve(
   "sub_01JD80AB2C3D4E5F6G7H8J9K0M",
