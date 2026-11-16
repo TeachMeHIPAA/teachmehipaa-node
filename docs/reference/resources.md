@@ -4,7 +4,7 @@
 
 Every resource and method of the `TeachMeHipaa` client: 13 resources and 45 methods, generated from the Developer API release `trimmed-2026-11-15`. For the full types, see the [API reference](https://teachmehipaa.github.io/teachmehipaa-node/); for how the pieces fit together, the [guides](../README.md).
 
-Every method is async, takes its parameters first and [request options](../guides/errors-and-retries.md#request-options) last, and resolves objects with a non-enumerable `lastResponse`. Paths are relative to the Environment's base URL (Live is `https://api.tme.so/v1`; Sandbox is `https://api-teachmehipaa-dev.web.app/v1`). The client fills in `{orgId}` from its [Organization binding](../guides/authentication.md#the-organization-binding).
+Every method is async, takes its parameters first and [request options](../guides/errors-and-retries.md#request-options) last, and resolves objects with a non-enumerable `lastResponse`. Paths are relative to the Environment's base URL (Live is `https://api.tme.so/v1`; Sandbox is `https://sandbox.api.tme.so/v1`). The client fills in `{orgId}` from its [Organization binding](../guides/authentication.md#the-organization-binding).
 
 ## Contents
 

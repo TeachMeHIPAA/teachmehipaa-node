@@ -48,8 +48,8 @@ describe("Client configuration", () => {
 
   it("talks to the Sandbox Environment when asked", async () => {
     expect(await urlsSentBy({ environment: "sandbox" })).toEqual([
-      "https://api-teachmehipaa-dev.web.app/v1/auth/token",
-      `https://api-teachmehipaa-dev.web.app/v1/organizations/${ORG_ID}/learners/${LEARNER_ID}`,
+      "https://sandbox.api.tme.so/v1/auth/token",
+      `https://sandbox.api.tme.so/v1/organizations/${ORG_ID}/learners/${LEARNER_ID}`,
     ]);
   });
 

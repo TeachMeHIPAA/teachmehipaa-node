@@ -44,8 +44,8 @@ describe("A client without credentials", () => {
     expect(page.items).toEqual([courseBody]);
     expect(verification.status).toBe("valid");
     expect(fake.requests.map((request) => request.url)).toEqual([
-      "https://api-teachmehipaa-dev.web.app/v1/courses",
-      `https://api-teachmehipaa-dev.web.app/v1/certificate-verifications/${TINY_ID}`,
+      "https://sandbox.api.tme.so/v1/courses",
+      `https://sandbox.api.tme.so/v1/certificate-verifications/${TINY_ID}`,
     ]);
     fake.requests.forEach((request) => {
       expect(request.headers).not.toHaveProperty("authorization");

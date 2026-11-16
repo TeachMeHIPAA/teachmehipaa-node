@@ -82,10 +82,10 @@ Every credential belongs to one **Environment**: **Live**, the default, or
 **Sandbox**, for development and tests, where Learners are never emailed.
 Credentials never work across Environments.
 
-| `environment`      | Base URL                                  |
-| ------------------ | ----------------------------------------- |
-| `"live"` (default) | `https://api.tme.so/v1`                   |
-| `"sandbox"`        | `https://api-teachmehipaa-dev.web.app/v1` |
+| `environment`      | Base URL                        |
+| ------------------ | ------------------------------- |
+| `"live"` (default) | `https://api.tme.so/v1`         |
+| `"sandbox"`        | `https://sandbox.api.tme.so/v1` |
 
 `baseUrl` overrides the Environment's URL, such as to point at a mock server.
 `auth.introspect()` tells you which Environment a token is for: its `mode` is
