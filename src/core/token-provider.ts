@@ -25,7 +25,7 @@ export interface TokenProvider {
 }
 
 /** Where and how the client talks to the OAuth token endpoint. */
-export interface TokenEndpoint {
+interface TokenEndpoint {
   readonly tokenUrl: string;
   readonly userAgent: string;
   readonly transport: Transport;

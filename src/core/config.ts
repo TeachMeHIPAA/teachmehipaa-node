@@ -2,7 +2,7 @@ import { systemClock, type Clock } from "./clock.js";
 import { withRequestLogging, type Logger } from "./logging.js";
 import type { TokenProvider } from "./token-provider.js";
 import { fetchTransport, type Transport } from "./transport.js";
-import { optionsValidator } from "./usage.js";
+import { usageError } from "./usage.js";
 import { buildUserAgent, type AppInfo } from "./user-agent.js";
 
 export type Environment = "live" | "sandbox";
@@ -135,7 +135,12 @@ const KNOWN_OPTIONS: ReadonlySet<string> = new Set<
 const DEFAULT_MAX_RETRIES = 2;
 const DEFAULT_TIMEOUT_MS = 80_000;
 
-const { invalid, requireNonEmptyString } = optionsValidator();
+const requireNonEmptyString = (value: unknown, name: string): string => {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw usageError(`${name} must be a non-empty string`);
+  }
+  return value;
+};
 
 const optionalNonEmptyString = (
   value: unknown,
@@ -151,13 +156,13 @@ const resolveBaseUrl = (environment: unknown, baseUrl: unknown): string => {
     environment !== "live" &&
     environment !== "sandbox"
   ) {
-    throw invalid('environment must be "live" or "sandbox"');
+    throw usageError('environment must be "live" or "sandbox"');
   }
   if (baseUrl === undefined) {
     return ENVIRONMENT_BASE_URLS[environment ?? "live"];
   }
   if (typeof baseUrl !== "string" || !URL.canParse(baseUrl)) {
-    throw invalid("baseUrl must be an absolute URL");
+    throw usageError("baseUrl must be an absolute URL");
   }
   return trimTrailingSlashes(baseUrl);
 };
@@ -167,7 +172,7 @@ const resolveScopes = (value: unknown): readonly string[] | undefined => {
     return undefined;
   }
   if (!Array.isArray(value) || value.some((s) => typeof s !== "string")) {
-    throw invalid("scopes must be an array of strings");
+    throw usageError("scopes must be an array of strings");
   }
   return Object.freeze([...(value as readonly string[])]);
 };
@@ -177,7 +182,7 @@ const resolveMaxRetries = (value: unknown): number => {
     return DEFAULT_MAX_RETRIES;
   }
   if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
-    throw invalid("maxRetries must be a non-negative integer");
+    throw usageError("maxRetries must be a non-negative integer");
   }
   return value;
 };
@@ -187,7 +192,7 @@ const resolveTimeout = (value: unknown): number => {
     return DEFAULT_TIMEOUT_MS;
   }
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
-    throw invalid("timeout must be a positive number of milliseconds");
+    throw usageError("timeout must be a positive number of milliseconds");
   }
   return value;
 };
@@ -197,13 +202,13 @@ const resolveTransport = (
   transport: unknown,
 ): Transport => {
   if (fetchImpl !== undefined && transport !== undefined) {
-    throw invalid("give either fetch or transport, not both");
+    throw usageError("give either fetch or transport, not both");
   }
   if (fetchImpl !== undefined && typeof fetchImpl !== "function") {
-    throw invalid("fetch must be a function");
+    throw usageError("fetch must be a function");
   }
   if (transport !== undefined && typeof transport !== "function") {
-    throw invalid("transport must be a function");
+    throw usageError("transport must be a function");
   }
   return (
     (transport as Transport | undefined) ??
@@ -220,7 +225,7 @@ const resolveLogger = (value: unknown): Logger | undefined => {
     value === null ||
     typeof (value as Partial<Logger>).debug !== "function"
   ) {
-    throw invalid("logger must have a debug(message, fields) method");
+    throw usageError("logger must have a debug(message, fields) method");
   }
   return value as Logger;
 };
@@ -230,7 +235,7 @@ const resolveAppInfo = (value: unknown): AppInfo | undefined => {
     return undefined;
   }
   if (typeof value !== "object" || value === null) {
-    throw invalid("appInfo must be an object with a name");
+    throw usageError("appInfo must be an object with a name");
   }
   const { name, version, url } = value as Record<string, unknown>;
   return {
@@ -250,7 +255,7 @@ const resolveTokenProvider = (value: unknown): TokenProvider => {
     typeof provider?.getAccessToken !== "function" ||
     typeof provider.invalidate !== "function"
   ) {
-    throw invalid(
+    throw usageError(
       "tokenProvider must have getAccessToken() and invalidate(accessToken) methods",
     );
   }
@@ -286,7 +291,7 @@ const resolveAuth = (options: ClientOptions): ResolvedAuth => {
     )
     .map(([name]) => name);
   if (conflicting.length > 0) {
-    throw invalid(
+    throw usageError(
       `give either tokenProvider or clientId and clientSecret, not both (got ${conflicting.join(", ")} too; scopes belong to the token provider)`,
     );
   }
@@ -300,7 +305,7 @@ const resolveAuth = (options: ClientOptions): ResolvedAuth => {
 export const resolveConfig = (options: ClientOptions): ResolvedConfig => {
   const unknown = Object.keys(options).filter((key) => !KNOWN_OPTIONS.has(key));
   if (unknown.length > 0) {
-    throw invalid(`unknown option(s): ${unknown.join(", ")}`);
+    throw usageError(`unknown option(s): ${unknown.join(", ")}`);
   }
   const clock = options.clock ?? systemClock;
   const transport = resolveTransport(options.fetch, options.transport);

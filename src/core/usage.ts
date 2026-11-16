@@ -7,15 +7,3 @@ export const prefixed = (message: string): string => `${PREFIX}${message}`;
 
 export const usageError = (message: string): TypeError =>
   new TypeError(prefixed(message));
-
-/** Checks the options a caller passed to the client constructor. */
-export const optionsValidator = () => {
-  const invalid = usageError;
-  const requireNonEmptyString = (value: unknown, name: string): string => {
-    if (typeof value !== "string" || value.trim() === "") {
-      throw invalid(`${name} must be a non-empty string`);
-    }
-    return value;
-  };
-  return { invalid, requireNonEmptyString };
-};
