@@ -4,7 +4,7 @@ import { writeFile } from "node:fs/promises";
 import TeachMeHipaa, {
   OperationFailedError,
   OperationTimeoutError,
-} from "teachmehipaa";
+} from "@teachmehipaa/node";
 
 const requireEnv = (name: string): string => {
   const value = process.env[name];

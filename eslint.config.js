@@ -25,7 +25,7 @@ export default tseslint.config(
     },
   },
   {
-    // The examples import "teachmehipaa" by name, which only their own
+    // The examples import "@teachmehipaa/node" by name, which only their own
     // tsconfig maps to the source.
     files: ["examples/**/*.ts"],
     languageOptions: {

@@ -1,4 +1,4 @@
-// What README samples import as "teachmehipaa" when the README test runs
+// What README samples import as "@teachmehipaa/node" when the README test runs
 // them: the real library, with every client wired to the test's fake
 // transport and clock instead of the network.
 import {

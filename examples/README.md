@@ -24,7 +24,7 @@ export TMH_CLIENT_SECRET=tmh_cs_...
 npx tsx examples/quickstart.ts
 ```
 
-The examples import `"teachmehipaa"` by name, which inside this repository
+The examples import `"@teachmehipaa/node"` by name, which inside this repository
 resolves to the build in `dist/`. In your own project, install the package
 first (see the [README](../README.md#install)) and copy an
 example in.

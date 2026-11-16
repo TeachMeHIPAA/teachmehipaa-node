@@ -1,4 +1,4 @@
-# teachmehipaa
+# @teachmehipaa/node
 
 TypeScript client for the TeachMeHIPAA Developer API. Ships ESM and CommonJS
 for Node.js 20+, with no runtime dependencies.
@@ -8,7 +8,7 @@ for Node.js 20+, with no runtime dependencies.
 
 > [!IMPORTANT]
 > Pre-release. The Developer API is not generally available, and
-> `teachmehipaa` is not on npm yet. Build it from this repository as shown
+> `@teachmehipaa/node` is not on npm yet. Build it from this repository as shown
 > below. Names and behavior can change before 1.0.
 
 ## Install
@@ -17,13 +17,13 @@ for Node.js 20+, with no runtime dependencies.
 git clone https://github.com/TeachMeHIPAA/teachmehipaa-node.git
 cd teachmehipaa-node && npm ci && npm run build && npm pack
 # in your project:
-npm install ../teachmehipaa-node/teachmehipaa-0.0.0.tgz
+npm install ../teachmehipaa-node/teachmehipaa-node-0.0.0.tgz
 ```
 
 ## Usage
 
 ```ts sample=quickstart
-import TeachMeHipaa from "teachmehipaa";
+import TeachMeHipaa from "@teachmehipaa/node";
 
 const client = new TeachMeHipaa({
   clientId: process.env.TMH_CLIENT_ID!,
@@ -47,19 +47,19 @@ email, so start there.
 
 ## At a glance
 
-|              |                                                                                             |
-| ------------ | ------------------------------------------------------------------------------------------- |
-| Modules      | ESM and CommonJS from one `exports` map; `import TeachMeHipaa` or `require("teachmehipaa")` |
-| Types        | Bundled `.d.ts` and `.d.cts`, generated from the OpenAPI document; enums stay open          |
-| Runtime      | Node.js 20 and newer, tested on 20 and 22. Bun and Deno load it too                         |
-| Server-only  | It holds a client secret, so it has no browser build                                        |
-| Dependencies | None at runtime. HTTP is the global `fetch`; signatures use Web Crypto                      |
-| Timeouts     | 80 s per attempt by default, set per client or per call. `AbortSignal` stops polling loops  |
-| Lists        | `for await` walks every page lazily; `autoPagingToArray({ limit })` collects up to 10,000   |
-| Retries      | 2 by default, with backoff, on network errors, 409 `conflict`, 429 and 5xx                  |
-| Idempotency  | Each POST and PUT that takes one gets a generated `Idempotency-Key`, reused on retries      |
-| Webhooks     | `webhooks.constructEvent` verifies a Delivery from Express, a fetch handler or `node:http`  |
-| Privacy      | No telemetry. Logging is opt-in and never includes bodies or credentials                    |
+|              |                                                                                                   |
+| ------------ | ------------------------------------------------------------------------------------------------- |
+| Modules      | ESM and CommonJS from one `exports` map; `import TeachMeHipaa` or `require("@teachmehipaa/node")` |
+| Types        | Bundled `.d.ts` and `.d.cts`, generated from the OpenAPI document; enums stay open                |
+| Runtime      | Node.js 20 and newer, tested on 20 and 22. Bun and Deno load it too                               |
+| Server-only  | It holds a client secret, so it has no browser build                                              |
+| Dependencies | None at runtime. HTTP is the global `fetch`; signatures use Web Crypto                            |
+| Timeouts     | 80 s per attempt by default, set per client or per call. `AbortSignal` stops polling loops        |
+| Lists        | `for await` walks every page lazily; `autoPagingToArray({ limit })` collects up to 10,000         |
+| Retries      | 2 by default, with backoff, on network errors, 409 `conflict`, 429 and 5xx                        |
+| Idempotency  | Each POST and PUT that takes one gets a generated `Idempotency-Key`, reused on retries            |
+| Webhooks     | `webhooks.constructEvent` verifies a Delivery from Express, a fetch handler or `node:http`        |
+| Privacy      | No telemetry. Logging is opt-in and never includes bodies or credentials                          |
 
 ## Guides
 

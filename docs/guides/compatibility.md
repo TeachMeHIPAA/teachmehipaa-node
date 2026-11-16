@@ -8,7 +8,7 @@ conditions, each with its own types: `dist/index.js` with `index.d.ts`, and
 named export:
 
 ```ts sample=esm-imports
-import TeachMeHipaa, { NotFoundError, webhooks } from "teachmehipaa";
+import TeachMeHipaa, { NotFoundError, webhooks } from "@teachmehipaa/node";
 
 console.log(typeof TeachMeHipaa, typeof NotFoundError, typeof webhooks);
 ```
@@ -16,7 +16,7 @@ console.log(typeof TeachMeHipaa, typeof NotFoundError, typeof webhooks);
 CommonJS code requires the named export, or `.default`:
 
 ```js sample=commonjs
-const { TeachMeHipaa } = require("teachmehipaa");
+const { TeachMeHipaa } = require("@teachmehipaa/node");
 
 const client = new TeachMeHipaa({ environment: "sandbox" });
 

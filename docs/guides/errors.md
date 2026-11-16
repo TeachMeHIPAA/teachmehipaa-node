@@ -3,7 +3,7 @@
 Samples use the `client` from [The client](client.md).
 
 ```ts sample=errors
-import { NotFoundError, TeachMeHipaaError } from "teachmehipaa";
+import { NotFoundError, TeachMeHipaaError } from "@teachmehipaa/node";
 
 try {
   await client.learners.retrieve("sub_01JD80AB2C3D4E5F6G7H8J9K0M");
@@ -55,7 +55,7 @@ The class names the kind of failure and `code` names the reason. New codes
 can ship at any time, so keep a `default`:
 
 ```ts sample=errors-code
-import { ConflictError } from "teachmehipaa";
+import { ConflictError } from "@teachmehipaa/node";
 
 try {
   await client.learners.update(

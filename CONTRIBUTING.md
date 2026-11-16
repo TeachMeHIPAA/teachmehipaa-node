@@ -88,7 +88,7 @@ guide in `docs/guides/` honest, through the harness in
 `test/readme/harness.ts`. Every TypeScript block must carry an id in its info
 string, as in ` ```ts sample=quickstart `, unique within its test file. The
 tests type-check every sample with the repo's compiler settings, and run each
-runnable sample against the fake transport, with `"teachmehipaa"` pointing at
+runnable sample against the fake transport, with `"@teachmehipaa/node"` pointing at
 `test/readme/runtime.ts`, then check what it printed and sent. A sample that
 can't run (it touches the disk or starts a server) is listed in
 `TYPE_CHECKED_ONLY` with the reason. A sample that uses `client` without
@@ -178,7 +178,7 @@ publishing (OIDC, no npm token stored in the repo).
 `package.json` keeps `"private": true` until launch, so a `publish` run
 fails at `npm publish` (`EPRIVATE`) even if dispatched by mistake. To ship:
 
-1. On npm, configure trusted publishing for the `teachmehipaa` package:
+1. On npm, configure trusted publishing for the `@teachmehipaa/node` package:
    repository `TeachMeHIPAA/teachmehipaa-node`, workflow `release.yml`.
 2. In one PR: remove `"private": true`, set `version` (1.0.0 for the
    first release), and move the CHANGELOG's Unreleased entry under that

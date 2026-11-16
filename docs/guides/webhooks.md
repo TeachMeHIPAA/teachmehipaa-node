@@ -62,7 +62,7 @@ path and query string:
 
 ```ts sample=webhook-express
 import express from "express";
-import { WebhookSignatureError, webhooks } from "teachmehipaa";
+import { WebhookSignatureError, webhooks } from "@teachmehipaa/node";
 
 const app = express();
 
@@ -107,7 +107,7 @@ Next.js route handlers, Hono, Bun, Deno and Workers all hand you a `Request`.
 Pass `request.text()` and `request.url`:
 
 ```ts sample=webhook-fetch
-import { WebhookSignatureError, webhooks } from "teachmehipaa";
+import { WebhookSignatureError, webhooks } from "@teachmehipaa/node";
 
 export default {
   async fetch(request: Request): Promise<Response> {
@@ -138,7 +138,7 @@ export default {
 
 ```ts sample=webhook-node-http
 import { createServer } from "node:http";
-import { WebhookSignatureError, webhooks } from "teachmehipaa";
+import { WebhookSignatureError, webhooks } from "@teachmehipaa/node";
 
 createServer(async (req, res) => {
   const chunks: Buffer[] = [];
@@ -175,7 +175,7 @@ version arrives as `UnknownEvent` with its `eventType` and raw `data`.
 `processedEvents` stands for your record of handled ids:
 
 ```ts sample=webhook-dedupe
-import { webhooks } from "teachmehipaa";
+import { webhooks } from "@teachmehipaa/node";
 
 export const handleDelivery = async (
   body: string,
@@ -229,7 +229,7 @@ tells them apart.
 for a payload and path. Sign exactly the body and path you will send:
 
 ```ts sample=webhook-test-headers
-import { webhooks } from "teachmehipaa";
+import { webhooks } from "@teachmehipaa/node";
 
 const payload = JSON.stringify({
   eventId: "evt_01JD8M",

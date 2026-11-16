@@ -58,7 +58,7 @@ describe("code-samples.json", () => {
 
   it("creates its own client in every sample, from the environment", () => {
     Object.values(samples).forEach((code) => {
-      expect(code).toContain(`import TeachMeHipaa from "teachmehipaa";`);
+      expect(code).toContain(`import TeachMeHipaa from "@teachmehipaa/node";`);
       expect(code).toMatch(/const client = new TeachMeHipaa\(/);
       expect(code).toContain(`environment: "sandbox"`);
     });
