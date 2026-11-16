@@ -22,7 +22,6 @@ const UUID_V4 =
 
 const ENROLLMENT_ID = "enr_01JD8C";
 const SUBSCRIPTION_ID = "whs_01JD8D";
-const PARTNER_ID = "ptn_01JD8E";
 const CERTIFICATE_ID = "cert_01JD8F";
 
 /** `dev#/components/schemas/EnrollmentDto`. */
@@ -77,33 +76,30 @@ describe("Generated methods on the wire", () => {
     expect(JSON.parse(textBody(request))).toEqual({ refund: false });
   });
 
-  it("calls a partner method with the partnerId it is given and no Organization lookup", async () => {
-    const route = `GET /v1/partners/${PARTNER_ID}/organizations`;
+  it("calls a path without an Organization with its query and no Organization lookup", async () => {
+    const route = "GET /v1/courses";
     const items = [
       {
-        orgId: "org_clinic",
-        name: "Clinic",
-        createdAt: "2026-11-02T10:00:00.000Z",
-        grantActive: true,
+        courseId: "hipaa-2026",
+        title: "HIPAA Training 2026",
+        courseVersion: "2026.1",
+        passingThreshold: 80,
       },
     ];
-    const fake = createFakeTransport()
-      .script(TOKEN_ROUTE, tokenReply())
-      .script(route, {
-        json: { items, nextCursor: "cur_2" },
-        headers: { "x-request-id": "req_page" },
-      });
+    const fake = createFakeTransport().script(route, {
+      json: { items, nextCursor: "cur_2" },
+      headers: { "x-request-id": "req_page" },
+    });
 
-    const page = await clientOn(fake, {
-      organizationId: null,
-    }).partners.organizations.list(PARTNER_ID, { limit: 10 });
+    const page = await clientOn(fake, { organizationId: null }).courses.list({
+      limit: 10,
+    });
 
     expect(page.items).toEqual(items);
     expect(page.nextCursor).toBe("cur_2");
     expect(page.lastResponse.requestId).toBe("req_page");
     expect(fake.requests.map((request) => request.url)).toEqual([
-      "https://api.tme.so/v1/auth/token",
-      `https://api.tme.so/v1/partners/${PARTNER_ID}/organizations?limit=10`,
+      "https://api.tme.so/v1/courses?limit=10",
     ]);
   });
 

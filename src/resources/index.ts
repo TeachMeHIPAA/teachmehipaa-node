@@ -31,19 +31,6 @@ export type {
 } from "./learners.js";
 export type { MemberListParams } from "./members.js";
 export type {
-  PartnerOrganizationCreateParams,
-  PartnerOrganizationListParams,
-} from "./partners-organizations.js";
-export type {
-  PaymentMethodConfirmParams,
-  PaymentMethodSetupParams,
-} from "./payment-method.js";
-export type {
-  SeatOrderCreateParams,
-  SeatOrderListParams,
-  SeatOrderQuoteParams,
-} from "./seat-orders.js";
-export type {
   WebhookSubscriptionCreateParams,
   WebhookSubscriptionListParams,
   WebhookSubscriptionUpdateParams,

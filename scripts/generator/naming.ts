@@ -29,7 +29,7 @@ export const singular = (name: string): string => {
   return name;
 };
 
-/** `["partners", "organizations"]` → `PartnerOrganizations`. */
+/** `["webhookSubscriptions"]` → `WebhookSubscriptions`. */
 export const resourceClassName = (path: readonly string[]): string =>
   path
     .map((segment, index) =>
@@ -37,7 +37,7 @@ export const resourceClassName = (path: readonly string[]): string =>
     )
     .join("");
 
-/** `["partners", "organizations"]`, `list` → `PartnerOrganizationListParams`. */
+/** `["webhookSubscriptions"]`, `list` → `WebhookSubscriptionListParams`. */
 export const paramsTypeName = (
   path: readonly string[],
   method: string,

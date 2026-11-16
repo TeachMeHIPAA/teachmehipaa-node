@@ -4,9 +4,9 @@ import type { TokenIntrospectionMode } from "./token-introspection-mode.js";
 import type { TokenIntrospectionScopesItem } from "./token-introspection-scopes-item.js";
 
 export interface TokenIntrospection {
-  /** `client` for an API client or partner app, `user` for a person. */
+  /** `client` for an API client, `user` for a person. */
   readonly actorType: TokenIntrospectionActorType;
-  /** The API client or partner app the token belongs to. */
+  /** The API client the token belongs to. */
   readonly clientId: string | null;
   /** The person the token belongs to, for a user token. */
   readonly subjectId: string | null;

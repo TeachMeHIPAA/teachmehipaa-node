@@ -11,9 +11,6 @@ import { Events } from "../extensions/events.js";
 import { Learners } from "./learners.js";
 import { Members } from "./members.js";
 import { Operations } from "./operations.js";
-import { Partners } from "./partners.js";
-import { PaymentMethod } from "./payment-method.js";
-import { SeatOrders } from "./seat-orders.js";
 import { Seats } from "./seats.js";
 import { WebhookSubscriptions } from "./webhook-subscriptions.js";
 
@@ -30,9 +27,6 @@ export class ApiResources {
   readonly learners: Learners;
   readonly members: Members;
   readonly operations: Operations;
-  readonly partners: Partners;
-  readonly paymentMethod: PaymentMethod;
-  readonly seatOrders: SeatOrders;
   readonly seats: Seats;
   readonly webhookSubscriptions: WebhookSubscriptions;
 
@@ -48,9 +42,6 @@ export class ApiResources {
     this.learners = new Learners(requester);
     this.members = new Members(requester);
     this.operations = new Operations(requester);
-    this.partners = new Partners(requester);
-    this.paymentMethod = new PaymentMethod(requester);
-    this.seatOrders = new SeatOrders(requester);
     this.seats = new Seats(requester);
     this.webhookSubscriptions = new WebhookSubscriptions(requester);
   }

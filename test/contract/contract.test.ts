@@ -12,7 +12,6 @@ const CERTIFICATE_ID = "cert_01JD8F";
 const COURSE_ID = "hipaa-2026";
 const SUBSCRIPTION_ID = "whs_01JD8D";
 const OPERATION_ID = "op-01JD8H";
-const PARTNER_ID = "ptn_01JD8E2C3D4E5F6G7H8J9K0M1N";
 const TINY_ID = "cAbCdEfGhIjKl";
 
 interface Violation {
@@ -60,10 +59,10 @@ beforeEach(() => {
 
 describe("Contract: the harness", () => {
   it("catches a request that breaks the spec", async () => {
-    const quote = client.seatOrders.quote({ quantity: 0 });
+    const page = client.courses.list({ limit: 0 });
 
-    await expect(quote).rejects.toBeInstanceOf(InvalidRequestError);
-    expect(requestViolations.join()).toContain("quantity");
+    await expect(page).rejects.toBeInstanceOf(InvalidRequestError);
+    expect(requestViolations.join()).toContain("limit");
     requestViolations.length = 0;
   });
 });
@@ -168,17 +167,6 @@ describe("Contract: Certificates", () => {
   });
 });
 
-describe("Contract: Seat orders", () => {
-  it("quotes a Seat order", async () => {
-    const quote = await client.seatOrders.quote({
-      quantity: 10,
-      currency: "usd",
-    });
-
-    expect(typeof quote.quantity).toBe("number");
-  });
-});
-
 describe("Contract: Webhook subscriptions", () => {
   it("creates a Webhook subscription and returns its Signing secret", async () => {
     const subscription = await client.webhookSubscriptions.create({
@@ -199,7 +187,7 @@ describe("Contract: Webhook subscriptions", () => {
   });
 });
 
-describe("Contract: Events, Operations, auth and Partners", () => {
+describe("Contract: Events, Operations and auth", () => {
   it("lists the Event log", async () => {
     const page = await client.events.list({ limit: 25 });
 
@@ -220,13 +208,5 @@ describe("Contract: Events, Operations, auth and Partners", () => {
     const introspection = await client.auth.introspect();
 
     expect(typeof introspection.actorType).toBe("string");
-  });
-
-  it("lists a Partner's customer Organizations", async () => {
-    const page = await client.partners.organizations.list(PARTNER_ID, {
-      limit: 10,
-    });
-
-    expect(Array.isArray(page.items)).toBe(true);
   });
 });

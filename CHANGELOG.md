@@ -7,15 +7,15 @@ All notable changes to this library are documented here. It follows
 ## [Unreleased]
 
 The first release, to ship as 1.0.0 when the Developer API launches.
-Generated from the Developer API document release `waggish-wombat`.
+Generated from the Developer API document release `trimmed-2026-11-15`.
 
 ### Added
 
-- `TeachMeHipaa` client for all 56 Developer API operations, as resources and
+- `TeachMeHipaa` client for all 44 Developer API operations, as resources and
   typed models generated from the shared SDK IR: Learners, Enrollments,
   Certificates, Certificate verifications, Compliance, Courses, Members,
-  Seats, Seat orders, the payment method, Audit events, Webhook
-  subscriptions, the Event log, Operations, `auth.introspect` and Partners.
+  Seats, Audit events, Webhook subscriptions, the Event log, Operations and
+  `auth.introspect`.
 - Client credentials authentication with cached, single-flight Access tokens
   renewed 60 s before expiry, and one renewal and replay on a 401.
 - Live and Sandbox Environments, a `baseUrl` override, narrower `scopes`, and

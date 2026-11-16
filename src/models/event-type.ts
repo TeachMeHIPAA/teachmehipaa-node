@@ -14,7 +14,4 @@ export type EventType =
   | "invite.bounced"
   | "certificate.revoked"
   | "seats.low"
-  | "seat_order.paid"
-  | "seat_order.failed"
-  | "seat_order.expired"
   | (string & {});

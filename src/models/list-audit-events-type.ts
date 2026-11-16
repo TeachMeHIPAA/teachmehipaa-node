@@ -16,13 +16,6 @@ export type ListAuditEventsType =
   | "api_client.secret_rotated"
   | "api_client.revoked"
   | "learner.updated"
-  | "oauth_grant.created"
-  | "oauth_grant.revoked"
-  | "seat_order.created"
-  | "seat_order.paid"
-  | "seat_order.failed"
   | "learner.launch_link_created"
   | "api_client.updated"
-  | "oauth_grant.updated"
-  | "organization.created_by_partner"
   | (string & {});

@@ -52,18 +52,6 @@ const EXPECTED_METHODS: Readonly<Record<string, readonly string[]>> = {
   listMembers: ["members.list"],
   getMember: ["members.retrieve"],
   getOperation: ["operations.retrieve"],
-  createPartnerOrganization: ["partners.organizations.create"],
-  listPartnerOrganizations: ["partners.organizations.list"],
-  getPartner: ["partners.retrieve"],
-  confirmPaymentMethod: ["paymentMethod.confirm"],
-  removePaymentMethod: ["paymentMethod.delete"],
-  preparePaymentMethod: ["paymentMethod.prepare"],
-  getPaymentMethod: ["paymentMethod.retrieve"],
-  setupPaymentMethod: ["paymentMethod.setup"],
-  createSeatOrder: ["seatOrders.create"],
-  listSeatOrders: ["seatOrders.list"],
-  quoteSeatOrder: ["seatOrders.quote"],
-  getSeatOrder: ["seatOrders.retrieve"],
   getSeatInventory: ["seats.retrieve"],
   createWebhookSubscription: ["webhookSubscriptions.create"],
   deleteWebhookSubscription: ["webhookSubscriptions.delete"],
@@ -168,14 +156,14 @@ describe("Generated surface", () => {
       (operationId) => !HAND_WRITTEN_OPERATIONS.includes(operationId),
     );
 
-    expect(covered).toHaveLength(55);
+    expect(covered).toHaveLength(43);
     expect([...covered].sort()).toEqual(Object.keys(EXPECTED_METHODS).sort());
   });
 
   it("exposes exactly one public method per IR method, with the expected name, plus the hand-written ones", () => {
     const expected = Object.values(EXPECTED_METHODS).flat();
 
-    expect(expected).toHaveLength(57);
+    expect(expected).toHaveLength(45);
     expect(publicMethods(client, "").sort()).toEqual(
       [...expected, ...HAND_WRITTEN_METHODS].sort(),
     );
@@ -190,7 +178,7 @@ describe("Generated surface", () => {
     named.forEach(({ name, expected }) => {
       expect(expected).toContain(name);
     });
-    expect(new Set(named.map(({ name }) => name)).size).toBe(57);
+    expect(new Set(named.map(({ name }) => name)).size).toBe(45);
   });
 
   it("is exactly what `npm run generate` writes from the vendored IR", async () => {

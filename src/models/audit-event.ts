@@ -11,17 +11,10 @@ import type { AuditEventLearnerUpdated } from "./audit-event-learner-updated.js"
 import type { AuditEventMemberRemoved } from "./audit-event-member-removed.js";
 import type { AuditEventMemberRoleChanged } from "./audit-event-member-role-changed.js";
 import type { AuditEventMemberTransferred } from "./audit-event-member-transferred.js";
-import type { AuditEventOauthGrantCreated } from "./audit-event-oauth-grant-created.js";
-import type { AuditEventOauthGrantRevoked } from "./audit-event-oauth-grant-revoked.js";
-import type { AuditEventOauthGrantUpdated } from "./audit-event-oauth-grant-updated.js";
 import type { AuditEventOrganizationClosed } from "./audit-event-organization-closed.js";
-import type { AuditEventOrganizationCreatedByPartner } from "./audit-event-organization-created-by-partner.js";
 import type { AuditEventOrganizationReopened } from "./audit-event-organization-reopened.js";
 import type { AuditEventOrganizationUpdated } from "./audit-event-organization-updated.js";
 import type { AuditEventSeatGranted } from "./audit-event-seat-granted.js";
-import type { AuditEventSeatOrderCreated } from "./audit-event-seat-order-created.js";
-import type { AuditEventSeatOrderFailed } from "./audit-event-seat-order-failed.js";
-import type { AuditEventSeatOrderPaid } from "./audit-event-seat-order-paid.js";
 
 /** Tell the variants apart by `type`. New variants may be added; handle values you don't recognize. */
 export type AuditEvent =
@@ -37,14 +30,7 @@ export type AuditEvent =
   | AuditEventMemberRemoved
   | AuditEventMemberRoleChanged
   | AuditEventMemberTransferred
-  | AuditEventOauthGrantCreated
-  | AuditEventOauthGrantRevoked
-  | AuditEventOauthGrantUpdated
   | AuditEventOrganizationClosed
-  | AuditEventOrganizationCreatedByPartner
   | AuditEventOrganizationReopened
   | AuditEventOrganizationUpdated
-  | AuditEventSeatGranted
-  | AuditEventSeatOrderCreated
-  | AuditEventSeatOrderFailed
-  | AuditEventSeatOrderPaid;
+  | AuditEventSeatGranted;

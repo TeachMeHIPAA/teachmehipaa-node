@@ -17,8 +17,5 @@ export type TokenIntrospectionScopesItem =
   | "learners:read"
   | "learners:write"
   | "compliance:read"
-  | "seats:purchase"
   | "webhooks:manage"
-  | "partner:orgs:read"
-  | "partner:orgs:write"
   | (string & {});
