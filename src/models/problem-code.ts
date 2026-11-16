@@ -1,0 +1,50 @@
+// Generated from openapi/sdk-ir.json — do not edit. Run `npm run generate`.
+
+/**
+ * A machine-readable error code, such as `seat_unavailable`.
+ *
+ * Known values are listed; the API may add more at any time, so handle values you don't recognize.
+ */
+export type ProblemCode =
+  | "validation_failed"
+  | "unauthorized"
+  | "forbidden"
+  | "not_found"
+  | "method_not_allowed"
+  | "not_acceptable"
+  | "conflict"
+  | "rate_limited"
+  | "precondition_required"
+  | "precondition_failed"
+  | "idempotency_key_reuse"
+  | "unsupported_media_type"
+  | "illegal_transition"
+  | "seat_unavailable"
+  | "seat_already_claimed"
+  | "already_invited"
+  | "email_already_registered"
+  | "last_admin_removal_blocked"
+  | "org_not_active"
+  | "enrollment_archived"
+  | "lessons_incomplete"
+  | "batch_too_large"
+  | "import_too_large"
+  | "export_too_large"
+  | "summary_too_large"
+  | "seat_not_refundable"
+  | "refund_failed"
+  | "not_configured"
+  | "reset_unavailable"
+  | "auto_recertify_unavailable"
+  | "api_client_limit_reached"
+  | "external_id_conflict"
+  | "cannot_offboard_admin"
+  | "cannot_launch_admin"
+  | "learner_removed"
+  | "learner_not_accepted"
+  | "cannot_rename_admin"
+  | "learner_in_multiple_orgs"
+  | "account_exists_use_sign_in"
+  | "name_change_not_allowed"
+  | "temporarily_unavailable"
+  | (string & {});
