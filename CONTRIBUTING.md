@@ -8,10 +8,9 @@ Use the Node version in `.nvmrc` (any Node 20 or newer works), then:
 npm ci
 npm run lint        # ESLint and Prettier
 npm run typecheck   # tsc --noEmit over src, test and scripts, then examples/
-npm test            # unit tests and the doc tests of the README and guides
+npm test            # unit tests and the README and code-sample doc tests
 npm run build       # ESM and CJS bundles with declarations, into dist/
 npm run check:dist  # loads dist/ as ESM and CJS; type-checks the doc samples against it
-npm run docs        # the TypeDoc site, into site/
 ```
 
 ## Generated and hand-written code
@@ -53,7 +52,8 @@ operationId and a type from that file to `OPERATION_RESPONSES` in
 2. Run `npm run generate` (it runs the TypeScript generator through `tsx`, a
    dev dependency, so any supported Node works). It validates the IR against
    its schema, then rewrites `src/models/`, `src/resources/` and
-   `docs/reference/resources.md`, deleting files the IR no longer produces.
+   `docs/reference/code-samples.json`, deleting files the IR no longer
+   produces.
 3. Run `npm test`. The generated-surface test fails if the committed output
    differs from what the generator writes, or if any spec operation lacks
    exactly one public method.
@@ -83,22 +83,16 @@ under test. No test calls the live API.
 
 ### Doc samples
 
-`test/readme.test.ts` and `test/guides.test.ts` keep the README and every
-guide in `docs/guides/` honest, through the harness in
+`test/readme.test.ts` keeps the README honest, through the harness in
 `test/readme/harness.ts`. Every TypeScript block must carry an id in its info
-string, as in ` ```ts sample=quickstart `, unique within its test file. The
-tests type-check every sample with the repo's compiler settings, and run each
+string, as in ` ```ts sample=quickstart `, unique within the file. The test
+type-checks every sample with the repo's compiler settings, and runs each
 runnable sample against the fake transport, with `"teachmehipaa"` pointing at
-`test/readme/runtime.ts`, then check what it printed and sent. A sample that
-can't run (it touches the disk or starts a server) is listed in
-`TYPE_CHECKED_ONLY` with the reason. A sample that uses `client` without
-creating it gets a Sandbox client bound to `org_acme` prepended; names that
-stand for the reader's own code, such as `cursors`, are declared in the
-harness's `PLACEHOLDERS`. To add a sample, give it an id and add a
-`runs(...)` case or a `TYPE_CHECKED_ONLY` entry. A ` ```js sample=<id> `
-block is CommonJS: `npm run check:dist` runs it against the build, with a
-`fetch` that answers every request with a Course. Shell blocks are not
-tested.
+`test/readme/runtime.ts`, then checks what it printed and sent. A sample that
+can't run is listed in `TYPE_CHECKED_ONLY` with the reason. A sample that uses
+`client` without creating it gets a Sandbox client bound to `org_acme`
+prepended. To add a sample, give it an id and add a `runs(...)` case or a
+`TYPE_CHECKED_ONLY` entry. Shell blocks are not tested.
 
 `docs/reference/code-samples.json` comes from the table in
 `scripts/generator/samples.ts`: one program per IR operationId, using the
@@ -136,35 +130,22 @@ Environment. It never writes, and CI never runs it.
 
 ## Documentation
 
-| Path                               | What it is                                                    | Kept in sync by                                                  |
-| ---------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `README.md`                        | Overview, install, quickstart, links                          | `test/readme.test.ts`                                            |
-| `docs/guides/*.md`                 | Task guides                                                   | `test/guides.test.ts`                                            |
-| `docs/reference/resources.md`      | Every resource and method, from the IR                        | `npm run generate`; the generated-surface test                   |
-| `docs/reference/code-samples.json` | One program per operationId, for the monorepo's API reference | `npm run generate`; `test/code-samples.test.ts` type-checks each |
-| `docs/README.md`                   | Index of all documentation                                    | Hand-written                                                     |
-| `examples/*.ts`                    | Runnable programs against the Sandbox                         | `npm run typecheck` (`tsconfig.examples.json`)                   |
-| TypeDoc site                       | The API reference, from the TSDoc in `src/`                   | `npm run docs` in the Docs workflow                              |
+The API reference and guides live at
+[docs.teachmehipaa.com/api](https://docs.teachmehipaa.com/api?lang=node), built
+from the monorepo. This repo keeps only what feeds it or ships with the
+package:
 
-When you change the public interface, update the guide that covers it; the
-doc tests fail if a sample no longer compiles or behaves as shown. Write for
-partner developers, in the terms of `GLOSSARY.md`.
+| Path                               | What it is                                                   | Kept in sync by                                                  |
+| ---------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------- |
+| `README.md`                        | Overview, install, quickstart, links                         | `test/readme.test.ts`                                            |
+| `docs/reference/code-samples.json` | One program per operationId, synced into the hosted API docs | `npm run generate`; `test/code-samples.test.ts` type-checks each |
+| `docs/README.md`                   | Index of the repo's own documentation                        | Hand-written                                                     |
+| `examples/*.ts`                    | Runnable programs against the Sandbox                        | `npm run typecheck` (`tsconfig.examples.json`)                   |
+| TSDoc in `src/`                    | Editor hover docs, shipped in the `.d.ts` files              | Generated code takes it from the IR's descriptions               |
 
-`npm run docs` builds the TypeDoc site into `site/` from `src/index.ts`, with
-the README as its home page and the guides, the resource reference and the
-examples index as pages. `typedoc.json` sets `treatWarningsAsErrors`, so an
-unexported type in the public interface or a broken link fails the build.
-`typedoc-plugin-missing-exports` documents the classes the client exposes but
-doesn't export, such as the resource classes, and
-`scripts/typedoc-document-titles.mjs` names each page after its first
-heading. TSDoc on generated code comes from the IR's descriptions; fix those
-upstream.
-
-`.github/workflows/docs.yml` builds the site on every pull request and push,
-and on `main` deploys it to GitHub Pages with `actions/deploy-pages`. Pages
-must be enabled once in the repository settings (Settings → Pages → Source:
-GitHub Actions) before the first deploy succeeds; until then the deploy job
-fails, and the links to `https://teachmehipaa.github.io/teachmehipaa-node/` 404.
+When you change the public interface, update the README sample if it no
+longer compiles or behaves as shown. Write for partner developers, in the
+terms of `GLOSSARY.md`. Fix IR descriptions upstream, not in generated code.
 
 ## Releasing
 

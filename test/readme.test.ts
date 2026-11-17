@@ -2,12 +2,10 @@ import { describe, expect } from "vitest";
 import { createFakeTransport } from "./support/fake-transport.js";
 import {
   INTROSPECTION_ROUTE,
-  LEARNER_ROUTE,
   ORG,
   TOKEN_ROUTE,
   introspectionReply,
   learnerBody,
-  learnerReply,
   tokenReply,
 } from "./support/fixtures.js";
 import { learner, logged, page, sampleSuite } from "./readme/harness.js";
@@ -23,7 +21,6 @@ describe("README", () => {
     const fake = createFakeTransport()
       .script(TOKEN_ROUTE, tokenReply())
       .script(INTROSPECTION_ROUTE, introspectionReply())
-      .script(LEARNER_ROUTE, learnerReply())
       .script(
         `GET ${ORG}/learners`,
         page([learnerBody], "cursor-2"),
@@ -32,11 +29,7 @@ describe("README", () => {
 
     await runSample("quickstart", fake);
 
-    expect(logged).toEqual([
-      ["Ana Example", "in_progress"],
-      ["ana@example.com"],
-      ["learner2@example.com"],
-    ]);
+    expect(logged).toEqual([["ana@example.com"], ["learner2@example.com"]]);
     expect(fake.requests[0]?.url).toBe(
       "https://sandbox.api.tme.so/v1/auth/token",
     );

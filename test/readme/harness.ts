@@ -1,6 +1,6 @@
-// The doc test harness: README.md and docs/guides/*.md hold TypeScript
-// samples that partners copy, so every one is type-checked against the
-// library and, where it can run, run against the fake transport.
+// The doc test harness: README.md and docs/reference/code-samples.json hold
+// TypeScript samples that partners copy, so every one is type-checked
+// against the library and, where it can run, run against the fake transport.
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,13 +11,11 @@ import type { FakeTransport } from "../support/fake-transport.js";
 import {
   CLIENT_ID,
   CLIENT_SECRET,
-  LEARNER_ID,
   ORG_ID,
   learnerBody,
 } from "../support/fixtures.js";
 
 export const ROOT = fileURLToPath(new URL("../..", import.meta.url));
-export const WEBHOOK_SECRET = "readme-test-signing-secret";
 
 export interface Sample {
   /** The Markdown file it came from, relative to the repo root. */
@@ -62,26 +60,6 @@ const moduleSource = ({ code }: Sample): string => {
   return `${needsClient ? PRELUDE : ""}${code}\nexport {};\n`;
 };
 
-/** Stand-ins for the caller's own code that samples name in prose. */
-const PLACEHOLDERS = `declare global {
-  /** The Event log position a tail resumes from. */
-  const cursors: {
-    load(): Promise<string | undefined>;
-    save(eventId: string | null): Promise<void>;
-  };
-  /** The caller's own record of Events already handled. */
-  const processedEvents: {
-    has(eventId: string): Promise<boolean>;
-    add(eventId: string): Promise<void>;
-  };
-  /** The caller's storage for an Operation it will come back to. */
-  const jobs: { save(name: string): Promise<void>; load(): Promise<string> };
-  /** The caller's secret store. */
-  const secrets: { put(name: string, value: string): Promise<void> };
-}
-export {};
-`;
-
 /**
  * Type-checks samples with the repo's compiler settings, resolving
  * "teachmehipaa" to the source entry point, or with `TMH_README_TYPES=dist`
@@ -99,7 +77,6 @@ export const typeErrors = (samples: readonly Sample[]): readonly string[] => {
   const virtualPath = (sample: Sample) =>
     `${ROOT}doc-samples/${basename(sample.file, ".md")}/${sample.id}.ts`;
   const virtual = new Map<string, string>([
-    [`${ROOT}doc-samples/placeholders.d.ts`, PLACEHOLDERS],
     ...samples.map((sample): [string, string] => [
       virtualPath(sample),
       moduleSource(sample),
@@ -146,7 +123,6 @@ export const typeErrors = (samples: readonly Sample[]): readonly string[] => {
 };
 
 const runtime = await import("./runtime.js");
-export const { webhooks } = runtime;
 
 /** What samples printed with `console.log`, reset before each test. */
 export const logged: unknown[][] = [];
@@ -189,7 +165,6 @@ export const sampleSuite = (
     });
     vi.stubEnv("TMH_CLIENT_ID", CLIENT_ID);
     vi.stubEnv("TMH_CLIENT_SECRET", CLIENT_SECRET);
-    vi.stubEnv("TMH_WEBHOOK_SECRET", WEBHOOK_SECRET);
   });
 
   afterEach(() => {
@@ -261,35 +236,4 @@ export const learner = (n: number) => ({
   ...learnerBody,
   learnerId: `sub_01JD80AB2C3D4E5F6G7H8J9K${String(n).padStart(2, "0")}`,
   email: `learner${String(n)}@example.com`,
-});
-
-/** `dev#/components/schemas/Operation` for a done export. */
-export const exportOperation = (kind: string, filename: string) => ({
-  name: `organizations/${ORG_ID}/operations/0b7d4a8e-5c1f-4e2a-9d3b-6f8a1c2e4b7d`,
-  done: true,
-  metadata: { kind },
-  response: {
-    format: "csv",
-    contentType: "text/csv; charset=utf-8",
-    filename,
-    rowCount: 1,
-    // base64 of "learnerId,email\r\nsub_01,ana@example.com\r\n"
-    dataBase64: "bGVhcm5lcklkLGVtYWlsDQpzdWJfMDEsYW5hQGV4YW1wbGUuY29tDQo=",
-  },
-});
-
-/** `dev#/components/schemas/OrgEventsPage` items. */
-export const event = (eventId: string) => ({
-  eventId,
-  eventType: "learner.certified",
-  orgId: ORG_ID,
-  occurredAt: "2026-11-15T12:00:00.000Z",
-  data: {
-    learnerId: LEARNER_ID,
-    email: "ana@example.com",
-    externalId: "hr-123",
-    courseId: "hipaa-2026",
-    status: "compliant",
-    occurredAt: "2026-11-15T12:00:00.000Z",
-  },
 });
