@@ -6,6 +6,13 @@ All notable changes to this library are documented here. It follows
 
 ## [Unreleased]
 
+### Changed
+
+- The guides, the generated resource reference and the TypeDoc site on GitHub
+  Pages are gone; the documentation now lives at
+  [docs.teachmehipaa.com/api](https://docs.teachmehipaa.com/api?lang=node).
+  `docs/reference/code-samples.json` stays and feeds it.
+
 ## [1.0.0] - 2026-11-16
 
 The first release. Generated from the Developer API document release `trimmed-2026-11-15`.

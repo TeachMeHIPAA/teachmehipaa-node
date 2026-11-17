@@ -37,9 +37,8 @@
   },
   "scripts": {
     "build": "tsup",
-    "check:dist": "node scripts/check-dist.mjs && TMH_README_TYPES=dist vitest run test/readme.test.ts test/guides.test.ts test/code-samples.test.ts -t \"type-checks every sample\"",
+    "check:dist": "node scripts/check-dist.mjs && TMH_README_TYPES=dist vitest run test/readme.test.ts test/code-samples.test.ts -t \"type-checks every sample\"",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.examples.json",
-    "docs": "typedoc",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "generate": "tsx scripts/generate.ts",
@@ -59,8 +58,6 @@
     "prettier": "3.10.1",
     "tsup": "8.5.1",
     "tsx": "4.23.15",
-    "typedoc": "0.28.20",
-    "typedoc-plugin-missing-exports": "4.1.4",
     "typescript": "5.9.3",
     "typescript-eslint": "8.72.2",
     "vitest": "3.2.7"

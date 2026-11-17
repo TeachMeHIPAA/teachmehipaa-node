@@ -1,30 +1,14 @@
 # Documentation
 
-Start with the [README](../README.md): install and a working example. Then
-pick the guide for the job.
+The API reference and guides live at
+[docs.teachmehipaa.com/api](https://docs.teachmehipaa.com/api?lang=node). The
+[README](../README.md) has install and a working example.
 
-## Guides
+## Code samples
 
-| Guide                                           | Read it for                                                   |
-| ----------------------------------------------- | ------------------------------------------------------------- |
-| [The client](guides/client.md)                  | Credentials, Scopes, Environments, every option, logging      |
-| [Errors and retries](guides/errors.md)          | Error classes, `code`, retry rules, timeouts, request options |
-| [Writes](guides/writes.md)                      | Create or upsert, idempotency keys, ETags, merge patches      |
-| [Lists and the Event log](guides/pagination.md) | `for await`, pages, `events.tail` with an `AbortSignal`       |
-| [Operations and files](guides/operations.md)    | `wait()`, CSV exports and imports, PDFs, bulk changes         |
-| [Webhooks](guides/webhooks.md)                  | Subscriptions, `constructEvent`, Test deliveries              |
-| [Testing](guides/testing.md)                    | Sandbox, a fake `transport`, mock servers, handler tests      |
-| [Compatibility](guides/compatibility.md)        | ESM and CommonJS, TypeScript, runtimes, versioning            |
-
-## Reference
-
-- [Resource reference](reference/resources.md): each method's signature,
-  route, Scopes, retry and idempotency behavior. Generated from the SDK IR.
-- [`code-samples.json`](reference/code-samples.json): one runnable program per
-  API operation, generated alongside it. The TeachMeHIPAA API reference shows
-  these under "Node".
-- [TypeDoc](https://teachmehipaa.github.io/teachmehipaa-node/): every exported
-  class, function and type. `npm run docs` builds it into `site/`.
+[`reference/code-samples.json`](reference/code-samples.json) holds one
+runnable program per API operation, generated from the SDK IR. The hosted API
+reference shows these under "Node".
 
 ## Examples
 

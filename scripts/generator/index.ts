@@ -1,7 +1,6 @@
 import { format, resolveConfig } from "prettier";
 import type { Ir } from "./ir.ts";
 import { generateModels } from "./models.ts";
-import { generateReference } from "./reference.ts";
 import { generateResources } from "./resources.ts";
 import { generateCodeSamples } from "./samples.ts";
 
@@ -23,7 +22,6 @@ export const generate = async (
   const sources = new Map([
     ...generateModels(ir),
     ...generateResources(ir),
-    ...generateReference(ir),
     ...(await generateCodeSamples(ir)),
   ]);
   const formatted = await Promise.all(
