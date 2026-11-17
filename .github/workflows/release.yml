@@ -45,6 +45,9 @@ jobs:
     needs: verify
     if: ${{ inputs.publish }}
     runs-on: ubuntu-latest
+    # The npm trusted publisher is pinned to this environment, so only a job
+    # that names it can mint a publish credential.
+    environment: npm
     permissions:
       contents: read
       # npm trusted publishing exchanges this OIDC token for a short-lived
@@ -62,4 +65,4 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run check:dist
-      - run: npm publish --provenance --access public
+      - run: npm publish

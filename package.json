@@ -1,9 +1,8 @@
 {
   "name": "teachmehipaa",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Official Node.js and TypeScript library for the TeachMeHIPAA Developer API",
   "license": "MIT",
-  "private": true,
   "type": "module",
   "repository": {
     "type": "git",
@@ -32,6 +31,10 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "tsup",
     "check:dist": "node scripts/check-dist.mjs && TMH_README_TYPES=dist vitest run test/readme.test.ts test/guides.test.ts test/code-samples.test.ts -t \"type-checks every sample\"",
